@@ -14,6 +14,10 @@ app.set('view engine', 'ejs');
 app.use(express.static('public'));
 app.use(express.json());
 
+console.log('=== Iniciando configuração do WhatsApp ===');
+console.log('Ambiente:', process.env.NODE_ENV || 'desenvolvimento');
+console.log('Porta:', port);
+
 // Configuração do diretório de autenticação
 const authPath = process.env.NODE_ENV === 'production' 
     ? path.join('/tmp', '.wwebjs_auth')
@@ -26,10 +30,7 @@ if (!fs.existsSync(authPath)) {
 
 // Inicialização do cliente WhatsApp
 const client = new Client({
-    authStrategy: new LocalAuth({
-        clientId: "whatsapp-bot",
-        dataPath: authPath
-    }),
+    authStrategy: new LocalAuth(),
     puppeteer: {
         headless: true,
         args: [
@@ -41,7 +42,8 @@ const client = new Client({
             '--no-zygote',
             '--single-process',
             '--disable-gpu'
-        ]
+        ],
+        executablePath: process.env.NODE_ENV === 'production' ? '/usr/bin/chromium-browser' : undefined
     },
     qrMaxRetries: 3,
     authTimeoutMs: 60000,
@@ -63,6 +65,11 @@ const client = new Client({
     fetchGroupTags: true
 });
 
+console.log('=== Configuração do Puppeteer ===');
+console.log('Headless:', client.puppeteer.headless);
+console.log('Args:', client.puppeteer.args);
+console.log('ExecutablePath:', client.puppeteer.executablePath);
+
 // Variável para armazenar o QR Code atual
 let currentQR = null;
 
@@ -70,6 +77,7 @@ let currentQR = null;
 client.on('qr', (qr) => {
     console.log('\n=== Novo QR Code gerado ===');
     qrcode.generate(qr, { small: true });
+    console.log('QR Code gerado com sucesso');
     currentQR = qr;
 });
 
@@ -78,6 +86,16 @@ client.on('ready', () => {
     console.log(`📅 Data/Hora: ${new Date().toLocaleString()}`);
     console.log('=== Fim da inicialização ===\n');
     currentQR = null;
+});
+
+client.on('auth_failure', msg => {
+    console.error('\n=== Falha na autenticação ===');
+    console.error('Mensagem:', msg);
+});
+
+client.on('disconnected', (reason) => {
+    console.log('\n=== Cliente desconectado ===');
+    console.log('Motivo:', reason);
 });
 
 // Rota para verificar status do WhatsApp
@@ -483,6 +501,10 @@ client.initialize().then(() => {
         console.log(`📅 Data/Hora: ${new Date().toLocaleString()}`);
         console.log('=== Fim da inicialização do servidor ===\n');
     });
+}).catch(err => {
+    console.error('\n=== Erro na inicialização ===');
+    console.error('Erro:', err);
+    console.error('Stack:', err.stack);
 });
 
 // Função auxiliar para calcular métricas
