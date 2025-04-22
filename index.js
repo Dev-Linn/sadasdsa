@@ -4,6 +4,7 @@ const qrcode = require('qrcode-terminal');
 const storageService = require('./services/storage');
 const startBot = require('./services/whatsappBot');
 const fs = require('fs');
+const path = require('path');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -13,11 +14,21 @@ app.set('view engine', 'ejs');
 app.use(express.static('public'));
 app.use(express.json());
 
+// Configuração do diretório de autenticação
+const authPath = process.env.NODE_ENV === 'production' 
+    ? path.join('/tmp', '.wwebjs_auth')
+    : path.join(__dirname, '.wwebjs_auth');
+
+// Garante que o diretório existe
+if (!fs.existsSync(authPath)) {
+    fs.mkdirSync(authPath, { recursive: true });
+}
+
 // Inicialização do cliente WhatsApp
 const client = new Client({
     authStrategy: new LocalAuth({
         clientId: "whatsapp-bot",
-        dataPath: process.env.NODE_ENV === 'production' ? '/tmp/.wwebjs_auth' : './.wwebjs_auth'
+        dataPath: authPath
     }),
     puppeteer: {
         headless: true,
