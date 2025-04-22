@@ -6,7 +6,7 @@ const startBot = require('./services/whatsappBot');
 const fs = require('fs');
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
 // Configuração do Express
 app.set('view engine', 'ejs');
@@ -15,10 +15,22 @@ app.use(express.json());
 
 // Inicialização do cliente WhatsApp
 const client = new Client({
-    authStrategy: new LocalAuth(),
+    authStrategy: new LocalAuth({
+        clientId: "whatsapp-bot",
+        dataPath: process.env.NODE_ENV === 'production' ? '/tmp/.wwebjs_auth' : './.wwebjs_auth'
+    }),
     puppeteer: {
         headless: true,
-        args: ['--no-sandbox']
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--no-first-run',
+            '--no-zygote',
+            '--single-process',
+            '--disable-gpu'
+        ]
     },
     qrMaxRetries: 3,
     authTimeoutMs: 60000,
