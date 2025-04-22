@@ -1,0 +1,80 @@
+{
+  "55349712429869": {
+    "name": "Linn",
+    "timestamp": "2025-03-21T04:31:15.299Z",
+    "interactions": 3,
+    "messages": [
+      "a",
+      "a",
+      "anjinho"
+    ],
+    "products": [
+      "Luminária LED - ANJINHO"
+    ],
+    "status": "Novo",
+    "tags": [
+      "atacado"
+    ],
+    "formData": {
+      "nome": "Lincoln costa silva",
+      "cpf": "09095220656",
+      "email": "linnsilva3636@gmail.com",
+      "telefone": "34997129869",
+      "endereco": "rua nagela andre tilman 50, badduy",
+      "cep": "38305527"
+    },
+    "formStatus": "completo"
+  },
+  "55349712529869": {
+    "name": "Linn1",
+    "timestamp": "2025-03-22T04:31:15.299Z",
+    "interactions": 3,
+    "messages": [
+      "a",
+      "a",
+      "anjinho"
+    ],
+    "products": [
+      "Luminária LED - FREI GILSON"
+    ],
+    "status": "Novo",
+    "tags": [
+      "atacado"
+    ],
+    "formData": {
+      "nome": "Lincoln costa silva",
+      "cpf": "09095220656",
+      "email": "linnsilva3636@gmail.com",
+      "telefone": "34997129869",
+      "endereco": "rua nagela andre tilman 50, badduy",
+      "cep": "38305527"
+    },
+    "formStatus": "pendente"
+  },
+  "5534971249869": {
+    "name": "Linn2",
+    "timestamp": "2025-03-20T04:31:15.299Z",
+    "interactions": 3,
+    "messages": [
+      "a",
+      "a",
+      "anjinho"
+    ],
+    "products": [
+      "Luminária LED - ANJINHO"
+    ],
+    "status": "Novo",
+    "tags": [
+      "atacado"
+    ],
+    "formData": {
+      "nome": "Lincoln costa silva",
+      "cpf": "09095220656",
+      "email": "linnsilva3636@gmail.com",
+      "telefone": "34997129869",
+      "endereco": "rua nagela andre tilman 50, badduy",
+      "cep": "38305527"
+    },
+    "formStatus": "pendente"
+  }
+}

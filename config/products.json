@@ -1,0 +1,161 @@
+{
+    "products": [
+      {
+        "name": "Luminária LED - NOSSA SENHORA DE FÁTIMA",
+        "variations": [
+          "nossa senhora de fatima",
+          "nossa senhora fátima",
+          "senhora de fátima",
+          "fatima",
+          "fátima",
+          "quero luminária de fátima",
+          "tem luminária de nossa senhora de fátima"
+        ]
+      },
+      {
+        "name": "Luminária LED - NOSSA SENHORA DAS GRAÇAS",
+        "variations": [
+          "nossa senhora das gracas",
+          "nossa senhora das graças",
+          "senhora das graças",
+          "graças",
+          "gracas",
+          "quero luminária da senhora das graças"
+        ]
+      },
+      {
+        "name": "Luminária LED - NOSSA SENHORA (GENÉRICO)",
+        "variations": [
+          "nossa senhora",
+          "luminária nossa senhora",
+          "tem luminária de nossa senhora",
+          "quero luminária de nossa senhora"
+        ]
+      },
+      {
+        "name": "Luminária LED - JESUS CRISTO",
+        "variations": [
+          "jesus",
+          "jesus cristo",
+          "cristo",
+          "cristo jesus",
+          "luminária jesus",
+          "tem de jesus"
+        ]
+      },
+      {
+        "name": "Luminária LED - SAGRADO CORAÇÃO DE JESUS",
+        "variations": [
+          "sagrado coracao de jesus",
+          "sagrado coração de jesus",
+          "coração de jesus",
+          "sagrado coração",
+          "quero uma de sagrado coração de jesus"
+        ]
+      },
+      {
+        "name": "Luminária LED - IMACULADO CORAÇÃO DE MARIA",
+        "variations": [
+          "imaculado coracao de maria",
+          "imaculado coração de maria",
+          "coração de maria",
+          "tem da imaculada",
+          "quero luminária de maria"
+        ]
+      },
+      {
+        "name": "Luminária LED - SÃO MIGUEL",
+        "variations": [
+          "sao miguel",
+          "são miguel",
+          "miguel arcanjo",
+          "arcanjo miguel",
+          "miguel",
+          "tem luminária do são miguel"
+        ]
+      },
+      {
+        "name": "Luminária LED - SÃO JOSÉ",
+        "variations": [
+          "sao jose",
+          "são josé",
+          "josé",
+          "luminária são josé",
+          "tem luminária do josé"
+        ]
+      },
+      {
+        "name": "Luminária LED - SÃO FRANCISCO",
+        "variations": [
+          "sao francisco",
+          "são francisco",
+          "francisco",
+          "francisco de assis",
+          "quero uma de são francisco"
+        ]
+      },
+      {
+        "name": "Luminária LED - SANTA CLARA",
+        "variations": [
+          "santa clara",
+          "clara",
+          "luminária santa clara",
+          "tem de clara"
+        ]
+      },
+      {
+        "name": "Luminária LED - SALMO",
+        "variations": [
+          "salmo",
+          "tem luminária de salmo",
+          "quero salmo",
+          "salmo 91",
+          "salmo 23"
+        ]
+      },
+      {
+        "name": "Luminária LED - RELIGIÃO (GENÉRICO)",
+        "variations": [
+          "religiao",
+          "religião",
+          "coisa religiosa",
+          "imagem religiosa",
+          "tem luminária de religião"
+        ]
+      },
+      {
+        "name": "Luminária LED - POMBA ESPÍRITO SANTO",
+        "variations": [
+          "espirito santo",
+          "espírito santo",
+          "pomba do espirito santo",
+          "pomba branca",
+          "quero uma de espírito santo"
+        ]
+      },
+      {
+        "name": "Luminária LED - FREI GILSON",
+        "variations": [
+          "frei gilson",
+          "gilson",
+          "frei",
+          "luminária frei gilson"
+        ]
+      },
+      {
+        "name": "Luminária LED - ANJINHO",
+        "variations": [
+          "anjo",
+          "anjinho",
+          "tem luminária de anjinho",
+          "quero anjo"
+        ]
+      }
+    ],
+    "search_config": {
+      "min_similarity_threshold": 0.85,
+      "exact_match_boost": 2.0,
+      "word_order_importance": 0.6
+    }
+  }
+  
