@@ -1,0 +1,1810 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WhatsApp Leads Dashboard</title>
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-BZS7V87JBT"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-BZS7V87JBT');
+  </script>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet" />
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- ApexCharts -->
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+  <!-- Animate.css -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+  <style>
+    .glass-effect {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .gradient-bg {
+      background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+    }
+    .card-hover {
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .card-hover:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 3px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 3px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-gray-900 to-gray-800 text-white min-h-screen flex">
+  <!-- Sidebar -->
+  <aside class="w-72 glass-effect fixed inset-y-0 p-6 flex flex-col">
+    <div class="flex items-center mb-8">
+      <i class="bi bi-whatsapp text-4xl text-green-500 mr-3"></i>
+      <h1 class="text-2xl font-bold text-white">WhatsApp Leads</h1>
+    </div>
+    <nav class="space-y-2 flex-1">
+      <button class="w-full flex items-center px-4 py-3 rounded-xl text-gray-300 hover:text-white hover:bg-white/10 transition-all duration-300" data-section="overview">
+        <i class="bi bi-speedometer2 mr-3 text-xl"></i>Visão Geral
+      </button>
+      <button class="w-full flex items-center px-4 py-3 rounded-xl text-gray-300 hover:text-white hover:bg-white/10 transition-all duration-300" data-section="leads">
+        <i class="bi bi-people-fill mr-3 text-xl"></i>Leads
+      </button>
+      <button class="w-full flex items-center px-4 py-3 rounded-xl text-gray-300 hover:text-white hover:bg-white/10 transition-all duration-300" data-section="products">
+        <i class="bi bi-box-seam mr-3 text-xl"></i>Produtos
+      </button>
+      <button class="w-full flex items-center px-4 py-3 rounded-xl text-gray-300 hover:text-white hover:bg-white/10 transition-all duration-300" data-section="analytics">
+        <i class="bi bi-graph-up-arrow mr-3 text-xl"></i>Análises
+      </button>
+      <button class="w-full flex items-center px-4 py-3 rounded-xl text-gray-300 hover:text-white hover:bg-white/10 transition-all duration-300" data-section="reports">
+        <i class="bi bi-bar-chart-line-fill mr-3 text-xl"></i>Analytics
+      </button>
+    </nav>
+    <div class="mt-auto">
+      <div class="flex items-center p-4 rounded-xl bg-white/5">
+        <div class="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center">
+          <i class="bi bi-person text-xl"></i>
+        </div>
+        <div class="ml-3">
+          <p class="text-sm font-medium">Admin</p>
+          <p class="text-xs text-gray-400">Administrador</p>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="flex-1 ml-72 p-8">
+    <!-- Header -->
+    <header class="flex justify-between items-center mb-8">
+      <div>
+        <h2 class="text-3xl font-bold mb-2">Dashboard</h2>
+        <p class="text-gray-400">Bem-vindo ao seu painel de controle</p>
+      </div>
+      <div class="flex items-center space-x-4">
+        <div class="relative">
+          <input type="search" placeholder="Buscar..." id="search-input" class="w-80 pl-10 pr-4 py-2 rounded-xl bg-white/5 border border-white/10 focus:outline-none focus:ring-2 focus:ring-green-500" />
+          <i class="bi bi-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+        </div>
+        <button class="p-2 rounded-xl bg-white/5 hover:bg-white/10 transition-all duration-300">
+          <i class="bi bi-bell text-xl"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Overview Section -->
+    <section id="overview" class="space-y-8">
+      <!-- Stats -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="glass-effect p-6 rounded-2xl card-hover">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-gray-400">Total de Leads</p>
+              <h3 id="total-leads" class="text-3xl font-bold mt-2">0</h3>
+            </div>
+            <div class="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center">
+              <i class="bi bi-people-fill text-green-500 text-xl"></i>
+            </div>
+          </div>
+          <div class="mt-4 flex items-center text-green-500">
+            <i class="bi bi-arrow-up me-1"></i>
+            <span>0%</span>
+          </div>
+        </div>
+        <div class="glass-effect p-6 rounded-2xl card-hover">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-gray-400">Novos Hoje</p>
+              <h3 id="new-leads" class="text-3xl font-bold mt-2">0</h3>
+            </div>
+            <div class="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center">
+              <i class="bi bi-person-plus text-blue-500 text-xl"></i>
+            </div>
+          </div>
+          <div class="mt-4 flex items-center text-green-500">
+            <i class="bi bi-arrow-up me-1"></i>
+            <span>0%</span>
+          </div>
+        </div>
+        <div class="glass-effect p-6 rounded-2xl card-hover">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-gray-400">Taxa de Conversão</p>
+              <h3 id="conversion-rate" class="text-3xl font-bold mt-2">0%</h3>
+            </div>
+            <div class="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center">
+              <i class="bi bi-graph-up text-purple-500 text-xl"></i>
+            </div>
+          </div>
+          <div class="mt-4 flex items-center text-red-500">
+            <i class="bi bi-arrow-down me-1"></i>
+            <span>0%</span>
+          </div>
+        </div>
+        <div class="glass-effect p-6 rounded-2xl card-hover">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-gray-400">Produto Mais Citado</p>
+              <h3 id="top-product" class="text-3xl font-bold mt-2">-</h3>
+            </div>
+            <div class="w-12 h-12 rounded-full bg-yellow-500/20 flex items-center justify-center">
+              <i class="bi bi-box-seam text-yellow-500 text-xl"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="col-span-2 glass-effect p-6 rounded-2xl card-hover">
+          <div class="flex items-center justify-between mb-6">
+            <h4 class="text-lg font-semibold">Evolução de Leads</h4>
+            <div class="flex space-x-2">
+              <button class="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10" onclick="updateLeadsChart('day')">Dia</button>
+              <button class="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10" onclick="updateLeadsChart('week')">Semana</button>
+              <button class="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10" onclick="updateLeadsChart('month')">Mês</button>
+            </div>
+          </div>
+          <div id="leadsEvolutionChart" class="h-80"></div>
+        </div>
+        <div class="glass-effect p-6 rounded-2xl card-hover">
+          <h4 class="text-lg font-semibold mb-6">Distribuição por Produto</h4>
+          <div id="productsDistributionChart" class="h-80"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Leads Section -->
+    <section id="leads" class="hidden glass-effect p-6 rounded-2xl">
+      <div class="flex items-center justify-between mb-6">
+        <h4 class="text-lg font-semibold">Leads Recentes</h4>
+      </div>
+      <div class="overflow-x-auto custom-scrollbar">
+        <table class="min-w-full">
+          <thead>
+            <tr class="border-b border-white/10">
+              <th class="px-4 py-3 text-left text-gray-400">Nome</th>
+              <th class="px-4 py-3 text-left text-gray-400 hidden md:table-cell">Número</th>
+              <th class="px-4 py-3 text-left text-gray-400 hidden lg:table-cell">Primeiro Contato</th>
+              <th class="px-4 py-3 text-left text-gray-400">Status</th>
+              <th class="px-4 py-3 text-left text-gray-400 hidden sm:table-cell">Produtos</th>
+              <th class="px-4 py-3 text-left text-gray-400">Tags</th>
+              <th class="px-4 py-3 text-left text-gray-400">Formulário</th>
+              <th class="px-4 py-3 text-left text-gray-400">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="leads-table" class="divide-y divide-white/10"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Products Section -->
+    <section id="products" class="hidden space-y-8">
+      <div class="glass-effect p-6 rounded-2xl">
+        <div class="flex items-center justify-between mb-6">
+          <h4 class="text-lg font-semibold">Análise de Produtos</h4>
+          <div class="flex space-x-2">
+            <button class="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10">Todos</button>
+            <button class="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10">Mais Vendidos</button>
+            <button class="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10">Menos Vendidos</button>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="h-96 flex items-center justify-center">
+            <div class="w-full max-w-2xl">
+              <canvas id="productBarChart"></canvas>
+            </div>
+          </div>
+          <div class="h-96">
+            <canvas id="productTrendChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass-effect p-6 rounded-2xl">
+        <h4 class="text-lg font-semibold mb-6">Detalhes dos Produtos</h4>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="products-grid">
+          <!-- Product cards will be dynamically added here -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Analytics Section -->
+    <section id="analytics" class="hidden space-y-8">
+      <div class="glass-effect p-6 rounded-2xl">
+        <div class="flex items-center justify-between mb-6">
+          <h4 class="text-lg font-semibold">Análise de Mensagens</h4>
+          <div class="flex space-x-2">
+            <button class="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10">Hoje</button>
+            <button class="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10">Semana</button>
+            <button class="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10">Mês</button>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="h-96">
+            <canvas id="messageVolumeChart"></canvas>
+          </div>
+          <div class="h-96">
+            <canvas id="sentimentAnalysisChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Novos Gráficos -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Gráfico de Status do Formulário -->
+        <div class="glass-effect p-6 rounded-2xl">
+          <h4 class="text-lg font-semibold mb-6">Status dos Formulários</h4>
+          <div class="h-80">
+            <canvas id="formStatusChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Gráfico de Produtos Mais Vendidos -->
+        <div class="glass-effect p-6 rounded-2xl">
+          <h4 class="text-lg font-semibold mb-6">Produtos Mais Vendidos</h4>
+          <div class="h-80">
+            <canvas id="topProductsChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Gráfico de Evolução de Interações -->
+        <div class="glass-effect p-6 rounded-2xl">
+          <h4 class="text-lg font-semibold mb-6">Evolução de Interações</h4>
+          <div class="h-80">
+            <canvas id="interactionsChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Reports Section -->
+    <section id="reports" class="hidden space-y-8">
+      <!-- Google Analytics Overview -->
+      <div class="glass-effect p-6 rounded-2xl">
+        <div class="flex items-center justify-between mb-6">
+          <h4 class="text-lg font-semibold">Google Analytics</h4>
+          <div class="flex space-x-2">
+            <select id="ga-date-range" class="px-3 py-1 rounded-lg bg-white/5 text-white border border-white/10">
+              <option value="today">Hoje</option>
+              <option value="yesterday">Ontem</option>
+              <option value="7days">Últimos 7 dias</option>
+              <option value="30days">Últimos 30 dias</option>
+              <option value="90days">Últimos 90 dias</option>
+            </select>
+            <button class="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10">
+              <i class="bi bi-download me-1"></i>Exportar
+            </button>
+          </div>
+        </div>
+
+        <!-- Métricas Principais -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div class="glass-effect p-4 rounded-xl">
+            <h5 class="text-sm text-gray-400">Usuários</h5>
+            <p class="text-2xl font-bold" id="ga-users">-</p>
+            <div class="flex items-center text-green-500 text-sm">
+              <i class="bi bi-arrow-up me-1"></i>
+              <span id="ga-users-change">-</span>
+            </div>
+          </div>
+          <div class="glass-effect p-4 rounded-xl">
+            <h5 class="text-sm text-gray-400">Sessões</h5>
+            <p class="text-2xl font-bold" id="ga-sessions">-</p>
+            <div class="flex items-center text-green-500 text-sm">
+              <i class="bi bi-arrow-up me-1"></i>
+              <span id="ga-sessions-change">-</span>
+            </div>
+          </div>
+          <div class="glass-effect p-4 rounded-xl">
+            <h5 class="text-sm text-gray-400">Taxa de Rejeição</h5>
+            <p class="text-2xl font-bold" id="ga-bounce-rate">-</p>
+            <div class="flex items-center text-red-500 text-sm">
+              <i class="bi bi-arrow-up me-1"></i>
+              <span id="ga-bounce-change">-</span>
+            </div>
+          </div>
+          <div class="glass-effect p-4 rounded-xl">
+            <h5 class="text-sm text-gray-400">Tempo Médio na Página</h5>
+            <p class="text-2xl font-bold" id="ga-avg-time">-</p>
+            <div class="flex items-center text-green-500 text-sm">
+              <i class="bi bi-arrow-up me-1"></i>
+              <span id="ga-time-change">-</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Gráficos -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div class="glass-effect p-4 rounded-xl">
+            <h5 class="text-sm font-semibold mb-4">Tráfego por Canal</h5>
+            <div class="h-[250px] flex items-center justify-center">
+              <div class="w-full max-w-[300px]">
+                <canvas id="ga-traffic-chart"></canvas>
+              </div>
+            </div>
+          </div>
+          <div class="glass-effect p-4 rounded-xl">
+            <h5 class="text-sm font-semibold mb-4">Comportamento do Usuário</h5>
+            <div class="h-[250px]">
+              <canvas id="ga-behavior-chart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabelas Detalhadas -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Páginas Mais Visitadas -->
+          <div class="glass-effect p-4 rounded-xl">
+            <h5 class="text-sm font-semibold mb-4">Páginas Mais Visitadas</h5>
+            <div class="overflow-x-auto">
+              <table class="min-w-full">
+                <thead>
+                  <tr class="text-left text-sm text-gray-400">
+                    <th class="pb-2">Página</th>
+                    <th class="pb-2">Visualizações</th>
+                    <th class="pb-2">Tempo Médio</th>
+                    <th class="pb-2">Taxa de Saída</th>
+                  </tr>
+                </thead>
+                <tbody id="ga-top-pages"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Dispositivos -->
+          <div class="glass-effect p-4 rounded-xl">
+            <h5 class="text-sm font-semibold mb-4">Dispositivos</h5>
+            <div class="overflow-x-auto">
+              <table class="min-w-full">
+                <thead>
+                  <tr class="text-left text-sm text-gray-400">
+                    <th class="pb-2">Dispositivo</th>
+                    <th class="pb-2">Usuários</th>
+                    <th class="pb-2">Sessões</th>
+                    <th class="pb-2">Taxa de Conversão</th>
+                  </tr>
+                </thead>
+                <tbody id="ga-devices"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal de Dados do Formulário -->
+  <div id="formModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center">
+    <div class="glass-effect p-6 rounded-2xl w-full max-w-2xl">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-xl font-bold">Dados do Formulário</h3>
+        <button onclick="closeFormModal()" class="text-gray-400 hover:text-white">
+          <i class="bi bi-x-lg text-xl"></i>
+        </button>
+      </div>
+      <div class="space-y-4">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm text-gray-400">Nome</label>
+            <p id="form-nome" class="text-white font-medium"></p>
+          </div>
+          <div>
+            <label class="block text-sm text-gray-400">CPF</label>
+            <p id="form-cpf" class="text-white font-medium"></p>
+          </div>
+          <div>
+            <label class="block text-sm text-gray-400">Email</label>
+            <p id="form-email" class="text-white font-medium"></p>
+          </div>
+          <div>
+            <label class="block text-sm text-gray-400">Telefone</label>
+            <p id="form-telefone" class="text-white font-medium"></p>
+          </div>
+          <div>
+            <label class="block text-sm text-gray-400">Endereço</label>
+            <p id="form-endereco" class="text-white font-medium"></p>
+          </div>
+          <div>
+            <label class="block text-sm text-gray-400">CEP</label>
+            <p id="form-cep" class="text-white font-medium"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Edição de Lead -->
+  <div id="editLeadModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Editar Lead</h3>
+            <form id="editLeadForm" class="mt-4">
+                <input type="hidden" id="editLeadNumber">
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="editName">
+                        Nome
+                    </label>
+                    <input type="text" id="editName" name="name" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="editStatus">
+                        Status
+                    </label>
+                    <select id="editStatus" name="status" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                        <option value="novo">Novo</option>
+                        <option value="em_andamento">Em Andamento</option>
+                        <option value="convertido">Convertido</option>
+                        <option value="perdido">Perdido</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="editCpf">
+                        CPF
+                    </label>
+                    <input type="text" id="editCpf" name="formData.cpf" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="editEmail">
+                        Email
+                    </label>
+                    <input type="email" id="editEmail" name="formData.email" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="editPhone">
+                        Telefone
+                    </label>
+                    <input type="text" id="editPhone" name="formData.phone" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="editAddress">
+                        Endereço
+                    </label>
+                    <input type="text" id="editAddress" name="formData.address" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="editZipCode">
+                        CEP
+                    </label>
+                    <input type="text" id="editZipCode" name="formData.zipCode" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">
+                        Tags
+                    </label>
+                    <div id="editTags" class="flex flex-wrap gap-2 p-2 border rounded">
+                        <!-- Tags serão exibidas aqui -->
+                    </div>
+                </div>
+                <div class="flex justify-end mt-4">
+                    <button type="button" onclick="closeEditModal()" class="mr-2 px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                        Salvar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+  </div>
+
+  <script>
+    const baseConfig = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          labels: {
+            color: '#9CA3AF'
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: {
+            color: 'rgba(255, 255, 255, 0.1)'
+          },
+          ticks: {
+            color: '#9CA3AF'
+          }
+        },
+        y: {
+          grid: {
+            color: 'rgba(255, 255, 255, 0.1)'
+          },
+          ticks: {
+            color: '#9CA3AF'
+          }
+        }
+      }
+    };
+
+    let leadsChart = null;
+    let productsChart = null;
+    let messageChart = null;
+    let leadsEvolutionChart = null;
+    let productsDistributionChart = null;
+    let productBarChart = null;
+    let formStatusChart = null;
+    let topProductsChart = null;
+    let interactionsChart = null;
+
+    async function loadData() {
+      try {
+        const [leadsRes, statsRes] = await Promise.all([
+          fetch('/api/leads').catch(err => {
+            console.error('Erro ao buscar leads:', err);
+            throw new Error('Erro de conexão com a API de leads');
+          }),
+          fetch('/api/products/stats').catch(err => {
+            console.error('Erro ao buscar estatísticas:', err);
+            throw new Error('Erro de conexão com a API de estatísticas');
+          })
+        ]);
+
+        if (!leadsRes.ok) {
+          throw new Error(`Erro na API de leads: ${leadsRes.status} ${leadsRes.statusText}`);
+        }
+        if (!statsRes.ok) {
+          throw new Error(`Erro na API de estatísticas: ${statsRes.status} ${statsRes.statusText}`);
+        }
+
+        const leads = await leadsRes.json();
+        const stats = await statsRes.json();
+        
+        if (!leads || !stats) {
+          throw new Error('Dados inválidos recebidos da API');
+        }
+
+        console.log('Dados carregados:', { leads, stats });
+        updateDashboard(leads, stats);
+      } catch (err) {
+        console.error('Erro ao carregar dados:', err);
+        showError(`Erro ao carregar dados: ${err.message}. Tentando novamente em 5 segundos...`);
+        
+        // Tenta novamente após 5 segundos
+        setTimeout(loadData, 5000);
+      }
+    }
+
+    function showError(message) {
+      // Remove alertas anteriores
+      document.querySelectorAll('.error-alert').forEach(el => el.remove());
+      
+      const alert = document.createElement('div');
+      alert.className = 'error-alert fixed top-4 right-4 bg-red-500/20 text-red-500 px-4 py-2 rounded-lg animate__animated animate__fadeIn';
+      alert.textContent = message;
+      document.body.appendChild(alert);
+      
+      // Remove o alerta após 5 segundos
+      setTimeout(() => {
+        alert.classList.add('animate__fadeOut');
+        setTimeout(() => alert.remove(), 500);
+      }, 5000);
+    }
+
+    function updateDashboard(leads, stats) {
+      const leadsArray = Object.entries(leads);
+      const total = leadsArray.length;
+      const todayKey = new Date().toISOString().slice(0, 10);
+      const newLeads = leadsArray.filter(([_, lead]) => lead.timestamp.startsWith(todayKey)).length;
+      const convRate = total ? Math.round((newLeads / total) * 100) : 0;
+      
+      // Atualiza métricas principais
+      document.getElementById('total-leads').textContent = total.toLocaleString();
+      document.getElementById('new-leads').textContent = newLeads.toLocaleString();
+      document.getElementById('conversion-rate').textContent = convRate + '%';
+      
+      // Encontra o produto mais mencionado
+      const topProduct = stats.reduce((a, b) => 
+        (a.stats.mentions > b.stats.mentions) ? a : b
+      );
+      document.getElementById('top-product').textContent = topProduct.name;
+      
+      // Atualiza tabela e gráficos
+      populateTable(leads);
+      renderCharts(stats, leadsArray);
+      renderAnalyticsCharts(leads);
+    }
+
+    function populateTable(leads) {
+      const tbody = document.getElementById('leads-table');
+      tbody.innerHTML = '';
+      
+      Object.entries(leads)
+        .sort((a, b) => new Date(b[1].timestamp) - new Date(a[1].timestamp))
+        .forEach(([num, lead]) => {
+          const tr = document.createElement('tr');
+          tr.className = 'hover:bg-white/5 transition-colors';
+          
+          const formStatus = lead.formStatus || 'pendente';
+          const formStatusClass = {
+            'pendente': 'bg-yellow-500/20 text-yellow-500',
+            'em_andamento': 'bg-blue-500/20 text-blue-500',
+            'completo': 'bg-green-500/20 text-green-500'
+          }[formStatus];
+          
+          tr.innerHTML = `
+            <td class="px-4 py-3">${lead.name || '-'}</td>
+            <td class="px-4 py-3 hidden md:table-cell">${num}</td>
+            <td class="px-4 py-3 hidden lg:table-cell">${new Date(lead.timestamp).toLocaleString()}</td>
+            <td class="px-4 py-3">
+              <span class="px-2 py-1 rounded-full text-xs ${formStatusClass}">
+                ${formStatus.replace('_', ' ')}
+              </span>
+            </td>
+            <td class="px-4 py-3 hidden sm:table-cell">
+              ${lead.products ? lead.products.join(', ') : '-'}
+            </td>
+            <td class="px-4 py-3">
+              ${lead.tags ? lead.tags.map(tag => `
+                <span class="inline-block px-2 py-1 rounded-full text-xs bg-blue-500/20 text-blue-400 mr-1 mb-1">
+                  ${tag}
+                </span>
+              `).join('') : '-'}
+            </td>
+            <td class="px-4 py-3">
+              <button onclick="showFormModal('${num}')" 
+                      class="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10">
+                Ver Dados
+              </button>
+            </td>
+            <td class="px-4 py-3">
+              <div class="relative">
+                <button onclick="toggleActionMenu(this)" class="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10">
+                  <i class="bi bi-three-dots-vertical"></i>
+                </button>
+                <div class="action-menu hidden absolute right-0 mt-2 w-48 rounded-xl bg-gray-800 shadow-lg py-2 z-50">
+                  <button onclick="showEditModal('${num}')" class="w-full px-4 py-2 text-left text-gray-300 hover:bg-white/10">
+                    <i class="bi bi-pencil me-2"></i>Editar Lead
+                  </button>
+                  <button onclick="deleteLead('${num}')" class="w-full px-4 py-2 text-left text-red-400 hover:bg-white/10">
+                    <i class="bi bi-trash me-2"></i>Excluir Lead
+                  </button>
+                </div>
+              </div>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+    }
+
+    function renderCharts(stats, leadsArray) {
+      // Destruir gráficos existentes
+      if (leadsEvolutionChart) {
+        leadsEvolutionChart.destroy();
+      }
+      if (productsDistributionChart) {
+        productsDistributionChart.destroy();
+      }
+      if (messageChart) {
+        messageChart.destroy();
+      }
+      if (productBarChart) {
+        productBarChart.destroy();
+      }
+
+      // Popula o grid de produtos
+      populateProductsGrid(stats);
+
+      // Processa os dados dos leads
+      const leads = leadsArray || {};
+      console.log('Dados brutos dos leads:', leads);
+
+      // Gráfico de Evolução de Leads
+      const leadsByDay = {};
+      
+      // Converte o array de arrays para um objeto
+      const leadsObject = Array.isArray(leads) ? Object.fromEntries(leads) : leads;
+      
+      Object.entries(leadsObject).forEach(([number, lead]) => {
+        if (lead && lead.timestamp) {
+          const day = lead.timestamp.split('T')[0];
+          leadsByDay[day] = (leadsByDay[day] || 0) + 1;
+        }
+      });
+      
+      const sortedDays = Object.keys(leadsByDay).sort();
+      
+      // Verifica se temos dados para exibir
+      if (sortedDays.length > 0) {
+        const leadsChartOptions = {
+          series: [{
+            name: 'Leads',
+            data: sortedDays.map(day => leadsByDay[day])
+          }],
+          chart: {
+            type: 'area',
+            height: 350,
+            toolbar: {
+              show: false
+            },
+            background: 'transparent',
+            zoom: {
+              enabled: false
+            }
+          },
+          stroke: {
+            curve: 'smooth',
+            width: 2,
+            lineCap: 'round'
+          },
+          markers: {
+            size: 0
+          },
+          dataLabels: {
+            enabled: false
+          },
+          colors: ['#8B5CF6'],
+          fill: {
+            type: 'gradient',
+            gradient: {
+              shadeIntensity: 0.5,
+              opacityFrom: 0.2,
+              opacityTo: 0,
+              stops: [0, 100]
+            }
+          },
+          xaxis: {
+            categories: sortedDays.map(day => new Date(day).toLocaleDateString('pt-BR', {
+              day: '2-digit',
+              month: '2-digit'
+            })),
+            labels: {
+              style: {
+                colors: '#9CA3AF',
+                fontSize: '11px'
+              }
+            },
+            axisBorder: {
+              show: false
+            },
+            axisTicks: {
+              show: false
+            }
+          },
+          yaxis: {
+            labels: {
+              style: {
+                colors: '#9CA3AF',
+                fontSize: '11px'
+              }
+            },
+            min: 0,
+            tickAmount: 5
+          },
+          grid: {
+            borderColor: 'rgba(255, 255, 255, 0.1)',
+            strokeDashArray: 0,
+            xaxis: {
+              lines: {
+                show: false
+              }
+            },
+            yaxis: {
+              lines: {
+                show: true,
+                opacity: 0.1
+              }
+            }
+          },
+          tooltip: {
+            theme: 'dark',
+            y: {
+              formatter: function (val) {
+                return val + " leads"
+              }
+            }
+          }
+        };
+
+        // Verifica se o elemento existe antes de criar o gráfico
+        const chartElement = document.querySelector("#leadsEvolutionChart");
+        if (chartElement) {
+          // Destruir gráfico existente se houver
+          if (leadsEvolutionChart) {
+            leadsEvolutionChart.destroy();
+          }
+          
+          // Criar novo gráfico
+          leadsEvolutionChart = new ApexCharts(chartElement, leadsChartOptions);
+          leadsEvolutionChart.render();
+        } else {
+          console.error('Elemento do gráfico não encontrado');
+        }
+      } else {
+        console.log('Não há dados suficientes para exibir o gráfico de evolução de leads');
+        
+        // Exibir mensagem quando não há dados
+        const chartElement = document.querySelector("#leadsEvolutionChart");
+        if (chartElement) {
+          chartElement.innerHTML = '<div class="flex items-center justify-center h-full text-gray-400">Não há dados suficientes para exibir o gráfico</div>';
+        }
+      }
+
+      // Gráfico de Distribuição de Produtos
+      const topProducts = stats
+        .sort((a, b) => b.stats.mentions - a.stats.mentions)
+        .slice(0, 5);
+
+      const productsChartOptions = {
+        series: [{
+          name: 'Menções',
+          data: topProducts.map(p => p.stats.mentions)
+        }],
+        chart: {
+          type: 'bar',
+          height: 350,
+          toolbar: {
+            show: false
+          }
+        },
+        plotOptions: {
+          bar: {
+            borderRadius: 4,
+            horizontal: true,
+          }
+        },
+        dataLabels: {
+          enabled: true,
+          formatter: function (val) {
+            return val + " menções"
+          }
+        },
+        colors: ['#8B5CF6'],
+        xaxis: {
+          categories: topProducts.map(p => p.name.split(' - ')[1]),
+          labels: {
+            style: {
+              colors: '#9CA3AF',
+              fontSize: '12px'
+            }
+          }
+        },
+        yaxis: {
+          labels: {
+            style: {
+              colors: '#9CA3AF'
+            }
+          }
+        },
+        grid: {
+          borderColor: 'rgba(255, 255, 255, 0.1)',
+          strokeDashArray: 4
+        },
+        tooltip: {
+          theme: 'dark',
+          y: {
+            formatter: function (val) {
+              return val + " menções"
+            }
+          }
+        }
+      };
+
+      productsDistributionChart = new ApexCharts(document.querySelector("#productsDistributionChart"), productsChartOptions);
+      productsDistributionChart.render();
+
+      // Gráfico de Barras para Análise de Produtos
+      const productBarCtx = document.getElementById('productBarChart');
+      if (productBarCtx) {
+        productBarChart = new Chart(productBarCtx, {
+          type: 'bar',
+          data: {
+            labels: stats.map(s => s.name.split(' - ')[1]),
+            datasets: [{
+              label: 'Menções',
+              data: stats.map(s => s.stats.mentions),
+              backgroundColor: 'rgba(139, 92, 246, 0.8)',
+              borderRadius: 4,
+              borderWidth: 0
+            }]
+          },
+          options: {
+            indexAxis: 'y',
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: false
+              }
+            },
+            scales: {
+              x: {
+                beginAtZero: true,
+                grid: {
+                  color: 'rgba(255, 255, 255, 0.1)'
+                },
+                ticks: {
+                  color: '#9CA3AF',
+                  stepSize: 1
+                }
+              },
+              y: {
+                grid: {
+                  display: false
+                },
+                ticks: {
+                  color: '#9CA3AF'
+                }
+              }
+            },
+            barPercentage: 0.6,
+            categoryPercentage: 0.8
+          }
+        });
+      }
+
+      // Gráfico de Mensagens por Produto
+      if (messageChart) {
+        messageChart.destroy();
+      }
+      messageChart = new Chart(document.getElementById('messageVolumeChart'), {
+        type: 'bar',
+        data: {
+          labels: stats.map(s => s.name.split(' - ')[1]),
+          datasets: [{
+            label: 'Menções',
+            data: stats.map(s => s.stats.mentions),
+            backgroundColor: '#8B5CF6',
+            borderRadius: 4
+          }]
+        },
+        options: {
+          ...baseConfig,
+          plugins: {
+            legend: {
+              display: false
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                stepSize: 1
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function populateProductsGrid(stats) {
+      const productsGrid = document.getElementById('products-grid');
+      productsGrid.innerHTML = '';
+
+      stats.forEach(product => {
+        const card = document.createElement('div');
+        card.className = 'glass-effect p-6 rounded-2xl card-hover';
+        
+        const productName = product.name.split(' - ')[1] || product.name;
+        const mentions = product.stats.mentions || 0;
+        const conversionRate = product.stats.conversionRate || 0;
+        const lastMention = product.stats.lastMention ? new Date(product.stats.lastMention).toLocaleDateString('pt-BR') : 'Nunca';
+
+        card.innerHTML = `
+          <div class="flex items-center justify-between mb-4">
+            <h5 class="text-lg font-semibold">${productName}</h5>
+            <span class="px-3 py-1 rounded-full text-sm bg-purple-500/20 text-purple-300">
+              ${mentions} menções
+            </span>
+          </div>
+          <div class="space-y-3">
+            <div class="flex justify-between items-center">
+              <span class="text-gray-400">Taxa de Conversão</span>
+              <span class="font-medium ${
+                conversionRate >= 50 ? 'text-emerald-400' : 
+                conversionRate >= 30 ? 'text-amber-400' : 
+                'text-rose-400'
+              }">
+                ${conversionRate}%
+              </span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-400">Última Menção</span>
+              <span class="text-gray-300">${lastMention}</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-400">Status</span>
+              <span class="px-2 py-1 rounded-full text-xs font-medium ${
+                mentions > 10 ? 'bg-emerald-500/20 text-emerald-400' : 
+                mentions > 5 ? 'bg-amber-500/20 text-amber-400' : 
+                'bg-rose-500/20 text-rose-400'
+              }">
+                ${mentions > 10 ? 'Popular' : mentions > 5 ? 'Médio' : 'Baixo'}
+              </span>
+            </div>
+          </div>
+        `;
+        
+        productsGrid.appendChild(card);
+      });
+    }
+
+    function contactLead(num) {
+      window.open(`https://api.whatsapp.com/send?phone=${num}`, '_blank');
+    }
+
+    function showSuccess(message) {
+      const alert = document.createElement('div');
+      alert.className = 'error-alert fixed top-4 right-4 bg-green-500/20 text-green-500 px-4 py-2 rounded-lg animate__animated animate__fadeIn';
+      alert.textContent = message;
+      document.body.appendChild(alert);
+      
+      setTimeout(() => {
+        alert.classList.add('animate__fadeOut');
+        setTimeout(() => alert.remove(), 500);
+      }, 3000);
+    }
+
+    function updateLeadsChart(period) {
+      // Aqui você pode implementar a lógica para atualizar o gráfico baseado no período selecionado
+      // Por exemplo, agrupar os dados por dia, semana ou mês
+      console.log('Atualizando gráfico para o período:', period);
+    }
+
+    // Funções do Google Analytics
+    async function loadGoogleAnalytics() {
+      try {
+        console.log('🔄 Iniciando carregamento do Google Analytics...');
+        
+        // Verifica se o gtag está disponível
+        if (typeof gtag === 'undefined') {
+          console.error('❌ gtag não está definido! Verifique se o script do GA4 está carregado corretamente.');
+          return;
+        }
+        console.log('✅ gtag está disponível');
+
+        // Configura o GA4
+        gtag('config', 'G-BZS7V87JBT', {
+          debug_mode: true,
+          send_page_view: true
+        });
+
+        // Obtém dados do GA4
+        const data = await getGA4Data();
+        console.log('📈 Dados obtidos:', data);
+
+        // Atualiza a interface
+        updateGAMetrics(data);
+        updateGACharts(data);
+        updateGATables(data);
+
+        // Configura atualização periódica
+        setInterval(async () => {
+          const newData = await getGA4Data();
+          updateGAMetrics(newData);
+          updateGACharts(newData);
+          updateGATables(newData);
+        }, 300000); // Atualiza a cada 5 minutos
+        
+      } catch (error) {
+        console.error('❌ Erro ao carregar dados do Google Analytics:', error);
+        showError('Erro ao carregar dados do Analytics. Tente novamente mais tarde.');
+      }
+    }
+
+    async function getGA4Data() {
+      return new Promise((resolve) => {
+        // Obtém dados do dataLayer
+        const dataLayer = window.dataLayer || [];
+        const events = dataLayer.filter(event => 
+          event && typeof event === 'object' && 
+          event[0] === 'event'
+        );
+
+        // Processa os eventos
+        const data = {
+          users: events.length || 1,
+          sessions: 1,
+          bounceRate: '0%',
+          avgTime: '0:00',
+          traffic: {
+            direct: 0,
+            organic: 0,
+            social: 0,
+            referral: 0
+          },
+          behavior: {
+            labels: [],
+            data: []
+          },
+          pages: [],
+          devices: []
+        };
+
+        // Processa eventos de página
+        const pageViews = {};
+        events.forEach(event => {
+          if (event[1] === 'page_view') {
+            const pageData = event[2] || {};
+            const path = pageData.page_path || '/';
+            pageViews[path] = (pageViews[path] || 0) + 1;
+          }
+        });
+
+        // Converte pageViews para arrays de labels e data
+        data.behavior.labels = Object.keys(pageViews);
+        data.behavior.data = Object.values(pageViews);
+
+        // Se não houver dados, adiciona uma página padrão
+        if (data.behavior.labels.length === 0) {
+          data.behavior.labels = ['Página Atual'];
+          data.behavior.data = [1];
+        }
+
+        // Preenche dados das páginas mais visitadas
+        data.pages = Object.keys(pageViews).map(path => ({
+          path: path,
+          views: pageViews[path],
+          avgTime: '0:00',
+          exitRate: '0%'
+        }));
+
+        // Se não houver páginas, adiciona a página atual
+        if (data.pages.length === 0) {
+          data.pages.push({
+            path: '/',
+            views: 1,
+            avgTime: '0:00',
+            exitRate: '0%'
+          });
+        }
+
+        resolve(data);
+      });
+    }
+
+    function updateGAMetrics(data) {
+      document.getElementById('ga-users').textContent = data.users;
+      document.getElementById('ga-sessions').textContent = data.sessions;
+      document.getElementById('ga-bounce-rate').textContent = data.bounceRate;
+      document.getElementById('ga-avg-time').textContent = data.avgTime;
+    }
+
+    function updateGACharts(data) {
+      // Destruir gráficos existentes
+      if (window.trafficChart) {
+        window.trafficChart.destroy();
+      }
+      if (window.behaviorChart) {
+        window.behaviorChart.destroy();
+      }
+
+      // Gráfico de Tráfego
+      window.trafficChart = new Chart(document.getElementById('ga-traffic-chart'), {
+        type: 'doughnut',
+        data: {
+          labels: ['Direto', 'Orgânico', 'Social', 'Referral'],
+          datasets: [{
+            data: [
+              data.traffic.direct,
+              data.traffic.organic,
+              data.traffic.social,
+              data.traffic.referral
+            ],
+            backgroundColor: ['#8B5CF6', '#3B82F6', '#10B981', '#F59E0B']
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              align: 'center',
+              labels: {
+                boxWidth: 12,
+                padding: 15,
+                usePointStyle: true,
+                font: {
+                  size: 11
+                }
+              }
+            }
+          },
+          layout: {
+            padding: {
+              bottom: 10
+            }
+          }
+        }
+      });
+
+      // Gráfico de Comportamento
+      window.behaviorChart = new Chart(document.getElementById('ga-behavior-chart'), {
+        type: 'line',
+        data: {
+          labels: data.behavior.labels,
+          datasets: [{
+            label: 'Visualizações',
+            data: data.behavior.data,
+            borderColor: '#8B5CF6',
+            tension: 0.4,
+            fill: true,
+            backgroundColor: 'rgba(139, 92, 246, 0.1)'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              grid: {
+                color: 'rgba(255, 255, 255, 0.1)'
+              },
+              ticks: {
+                color: '#9CA3AF',
+                padding: 10
+              }
+            },
+            x: {
+              grid: {
+                display: false
+              },
+              ticks: {
+                color: '#9CA3AF',
+                maxRotation: 45,
+                minRotation: 45
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function updateGATables(data) {
+      // Páginas Mais Visitadas
+      const pagesHtml = data.pages.map(page => `
+        <tr class="border-t border-white/10">
+          <td class="py-2">${page.path}</td>
+          <td class="py-2">${page.views}</td>
+          <td class="py-2">${page.avgTime}</td>
+          <td class="py-2">${page.exitRate}</td>
+        </tr>
+      `).join('');
+      document.getElementById('ga-top-pages').innerHTML = pagesHtml;
+
+      // Dispositivos
+      const devicesHtml = data.devices.map(device => `
+        <tr class="border-t border-white/10">
+          <td class="py-2">${device.name}</td>
+          <td class="py-2">${device.users}</td>
+          <td class="py-2">${device.sessions}</td>
+          <td class="py-2">${device.conversionRate}</td>
+        </tr>
+      `).join('');
+      document.getElementById('ga-devices').innerHTML = devicesHtml;
+    }
+
+    function showFormModal(number) {
+        fetch(`/api/leads/${number}`)
+            .then(response => response.json())
+            .then(lead => {
+                // Pega os dados do formData
+                const formData = lead.formData || {};
+                
+                // Atualiza os campos com os valores corretos
+                document.getElementById('form-nome').textContent = formData.nome || '-';
+                document.getElementById('form-cpf').textContent = formData.cpf || '-';
+                document.getElementById('form-email').textContent = formData.email || '-';
+                document.getElementById('form-telefone').textContent = formData.telefone || '-';
+                document.getElementById('form-endereco').textContent = formData.endereco || '-';
+                document.getElementById('form-cep').textContent = formData.cep || '-';
+                
+                // Mostra o modal
+                document.getElementById('formModal').classList.remove('hidden');
+                document.getElementById('formModal').classList.add('flex');
+            })
+            .catch(error => {
+                console.error('Erro ao carregar dados do lead:', error);
+                showError('Erro ao carregar dados do lead');
+            });
+    }
+
+    function closeFormModal() {
+      document.getElementById('formModal').classList.add('hidden');
+      document.getElementById('formModal').classList.remove('flex');
+    }
+
+    function updateLeadsTable() {
+        fetch('/api/leads')
+            .then(response => response.json())
+            .then(leads => {
+                const tbody = document.getElementById('leads-table');
+                if (!tbody) {
+                    console.error('Elemento da tabela não encontrado');
+                    return;
+                }
+                tbody.innerHTML = '';
+                
+                Object.entries(leads).forEach(([number, lead]) => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-white/5 transition-colors';
+                    
+                    const formStatus = lead.formStatus || 'pendente';
+                    const formStatusClass = {
+                        'pendente': 'bg-yellow-500/20 text-yellow-500',
+                        'em_andamento': 'bg-blue-500/20 text-blue-500',
+                        'completo': 'bg-green-500/20 text-green-500'
+                    }[formStatus];
+                    
+                    const displayName = lead.formData?.nome || lead.name || '-';
+                    
+                    tr.innerHTML = `
+                        <td class="px-4 py-3">${displayName}</td>
+                        <td class="px-4 py-3 hidden md:table-cell">${number}</td>
+                        <td class="px-4 py-3 hidden lg:table-cell">${new Date(lead.timestamp).toLocaleString()}</td>
+                        <td class="px-4 py-3">
+                            <span class="px-2 py-1 rounded-full text-xs ${formStatusClass}">
+                                ${formStatus.replace('_', ' ')}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 hidden sm:table-cell">
+                            ${lead.products ? lead.products.join(', ') : '-'}
+                        </td>
+                        <td class="px-4 py-3">
+                            ${lead.tags ? lead.tags.map(tag => `
+                                <span class="inline-block px-2 py-1 rounded-full text-xs bg-blue-500/20 text-blue-400 mr-1 mb-1">
+                                    ${tag}
+                                </span>
+                            `).join('') : '-'}
+                        </td>
+                        <td class="px-4 py-3">
+                            <button onclick='showFormModal("${number}")' 
+                                    class="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10">
+                                Ver Dados
+                            </button>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="relative">
+                                <button onclick="toggleActionMenu(this)" class="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10">
+                                    <i class="bi bi-three-dots-vertical"></i>
+                                </button>
+                                <div class="action-menu hidden absolute right-0 mt-2 w-48 rounded-xl bg-gray-800 shadow-lg py-2 z-50">
+                                    <button onclick="showEditModal('${number}')" class="w-full px-4 py-2 text-left text-gray-300 hover:bg-white/10">
+                                        <i class="bi bi-pencil me-2"></i>Editar Lead
+                                    </button>
+                                    <button onclick="deleteLead('${number}')" class="w-full px-4 py-2 text-left text-red-400 hover:bg-white/10">
+                                        <i class="bi bi-trash me-2"></i>Excluir Lead
+                                    </button>
+                                </div>
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            })
+            .catch(error => {
+                console.error('Erro ao atualizar tabela de leads:', error);
+            });
+    }
+
+    function toggleActionMenu(button) {
+      const menu = button.nextElementSibling;
+      const allMenus = document.querySelectorAll('.action-menu');
+      
+      // Fecha todos os outros menus
+      allMenus.forEach(m => {
+        if (m !== menu) m.classList.add('hidden');
+      });
+      
+      // Toggle do menu atual
+      menu.classList.toggle('hidden');
+    }
+
+    // Fecha os menus quando clicar fora
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.action-menu') && !e.target.closest('button')) {
+        document.querySelectorAll('.action-menu').forEach(menu => {
+          menu.classList.add('hidden');
+        });
+      }
+    });
+
+    function showEditModal(number) {
+        fetch(`/api/leads/${number}`)
+            .then(response => response.json())
+            .then(lead => {
+                // Pega os dados do formData
+                const formData = lead.formData || {};
+                
+                // Preenche os campos do formulário com os valores corretos
+                document.getElementById('editLeadNumber').value = number;
+                document.getElementById('editName').value = formData.nome || lead.name || '';
+                document.getElementById('editStatus').value = lead.status || 'completo';
+                document.getElementById('editCpf').value = formData.cpf || '';
+                document.getElementById('editEmail').value = formData.email || '';
+                document.getElementById('editPhone').value = formData.telefone || '';
+                document.getElementById('editAddress').value = formData.endereco || '';
+                document.getElementById('editZipCode').value = formData.cep || '';
+                
+                // Atualiza as tags
+                const tagsContainer = document.getElementById('editTags');
+                tagsContainer.innerHTML = '';
+                if (lead.tags && lead.tags.length > 0) {
+                    lead.tags.forEach(tag => {
+                        const tagElement = document.createElement('span');
+                        tagElement.className = 'inline-block px-2 py-1 rounded-full text-xs bg-blue-500/20 text-blue-400';
+                        tagElement.textContent = tag;
+                        tagsContainer.appendChild(tagElement);
+                    });
+                } else {
+                    tagsContainer.innerHTML = '<span class="text-gray-400">Nenhuma tag</span>';
+                }
+                
+                // Mostra o modal
+                document.getElementById('editLeadModal').classList.remove('hidden');
+            })
+            .catch(error => {
+                console.error('Erro ao carregar dados do lead:', error);
+                showError('Erro ao carregar dados do lead');
+            });
+    }
+
+    function closeEditModal() {
+      document.getElementById('editLeadModal').classList.add('hidden');
+    }
+
+    // Adiciona o evento de submit do formulário
+    document.getElementById('editLeadForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const number = document.getElementById('editLeadNumber').value;
+      const formData = {
+        name: document.getElementById('editName').value,
+        status: document.getElementById('editStatus').value,
+        formData: {
+          nome: document.getElementById('editName').value,
+          cpf: document.getElementById('editCpf').value,
+          email: document.getElementById('editEmail').value,
+          telefone: document.getElementById('editPhone').value,
+          endereco: document.getElementById('editAddress').value,
+          cep: document.getElementById('editZipCode').value
+        }
+      };
+      
+      fetch(`/api/leads/${number}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData)
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Erro ao atualizar lead');
+        }
+        return response.json();
+      })
+      .then(updatedLead => {
+        closeEditModal();
+        updateLeadsTable();
+        showSuccess('Lead atualizado com sucesso!');
+      })
+      .catch(error => {
+        console.error('Erro ao atualizar lead:', error);
+        showError('Erro ao atualizar lead');
+      });
+    });
+
+    function deleteLead(number) {
+        if (!number) {
+            showError('Número do lead inválido');
+            return;
+        }
+
+        console.log('🗑️ Tentando excluir lead número:', number);
+        
+        if (confirm(`Tem certeza que deseja excluir este lead?`)) {
+            fetch(`/api/leads/${number}`, {
+                method: 'DELETE',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(async response => {
+                if (!response.ok) {
+                    const contentType = response.headers.get('content-type');
+                    if (contentType && contentType.includes('application/json')) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || 'Erro ao excluir lead');
+                    } else {
+                        throw new Error(`Erro ${response.status}: ${response.statusText}`);
+                    }
+                }
+                return response.text();
+            })
+            .then(() => {
+                console.log('✅ Lead excluído com sucesso');
+                showSuccess('Lead excluído com sucesso!');
+                updateLeadsTable();
+            })
+            .catch(error => {
+                console.error('❌ Erro ao excluir lead:', error);
+                showError(`Erro ao excluir lead: ${error.message}`);
+            });
+        }
+    }
+
+    async function updateTags(number) {
+        try {
+            console.log('🔄 Iniciando atualização de tags para:', number);
+            
+            // Verifica se o número está no formato correto
+            if (!number || typeof number !== 'string') {
+                throw new Error('Número de telefone inválido');
+            }
+            
+            // Remove caracteres não numéricos do número
+            const cleanNumber = number.replace(/\D/g, '');
+            console.log('📱 Número limpo:', cleanNumber);
+            
+            const response = await fetch(`/api/leads/${cleanNumber}/update-tags`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+                console.error('❌ Erro na resposta:', data);
+                throw new Error(data.error || data.details || 'Erro ao atualizar tags');
+            }
+            
+            if (data.success) {
+                console.log('✅ Tags atualizadas:', data.tags);
+                showSuccess('Tags atualizadas com sucesso!');
+                updateLeadsTable();
+            } else {
+                throw new Error('Resposta não indica sucesso');
+            }
+        } catch (error) {
+            console.error('❌ Erro ao atualizar tags:', error);
+            showError(`Erro ao atualizar tags: ${error.message}`);
+        }
+    }
+
+    function renderAnalyticsCharts(leads) {
+      // Destruir gráficos existentes antes de criar novos
+      if (formStatusChart) {
+        formStatusChart.destroy();
+      }
+      if (topProductsChart) {
+        topProductsChart.destroy();
+      }
+      if (interactionsChart) {
+        interactionsChart.destroy();
+      }
+
+      // Gráfico de Status do Formulário
+      const formStatusCtx = document.getElementById('formStatusChart');
+      if (formStatusCtx) {
+        const formStatusData = {
+          completo: 0,
+          pendente: 0
+        };
+
+        // Processa os dados dos leads
+        Object.values(leads).forEach(lead => {
+          if (lead && lead.formStatus) {
+            if (lead.formStatus === 'em_andamento') {
+              formStatusData.pendente += 1;
+            } else {
+              formStatusData[lead.formStatus] = (formStatusData[lead.formStatus] || 0) + 1;
+            }
+          } else {
+            formStatusData.pendente = (formStatusData.pendente || 0) + 1;
+          }
+        });
+
+        // Calcula o total para porcentagens
+        const total = Object.values(formStatusData).reduce((a, b) => a + b, 0);
+
+        formStatusChart = new Chart(formStatusCtx, {
+          type: 'doughnut',
+          data: {
+            labels: ['Completo', 'Pendente'],
+            datasets: [{
+              data: [formStatusData.completo, formStatusData.pendente],
+              backgroundColor: ['#10B981', '#F59E0B'],
+              borderWidth: 0
+            }]
+          },
+          options: {
+            ...baseConfig,
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: {
+                  color: '#9CA3AF',
+                  padding: 20,
+                  generateLabels: function(chart) {
+                    const data = chart.data;
+                    return data.labels.map((label, i) => {
+                      const value = data.datasets[0].data[i];
+                      const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                      return {
+                        text: `${label}: ${value} (${percentage}%)`,
+                        fillStyle: data.datasets[0].backgroundColor[i],
+                        hidden: false,
+                        lineCap: 'butt',
+                        lineDash: [],
+                        lineDashOffset: 0,
+                        lineJoin: 'miter',
+                        lineWidth: 1,
+                        strokeStyle: data.datasets[0].backgroundColor[i],
+                        pointStyle: 'circle',
+                        rotation: 0
+                      };
+                    });
+                  }
+                }
+              }
+            }
+          }
+        });
+      }
+
+      // Gráfico de Produtos Mais Vendidos
+      const topProductsCtx = document.getElementById('topProductsChart');
+      if (topProductsCtx) {
+        const productCount = {};
+        Object.values(leads).forEach(lead => {
+          if (lead.products) {
+            lead.products.forEach(product => {
+              productCount[product] = (productCount[product] || 0) + 1;
+            });
+          }
+        });
+
+        const sortedProducts = Object.entries(productCount)
+          .sort(([,a], [,b]) => b - a)
+          .slice(0, 5);
+
+        topProductsChart = new Chart(topProductsCtx, {
+          type: 'bar',
+          data: {
+            labels: sortedProducts.map(([product]) => product.split(' - ')[1] || product),
+            datasets: [{
+              label: 'Vendas',
+              data: sortedProducts.map(([,count]) => count),
+              backgroundColor: '#8B5CF6',
+              borderRadius: 4
+            }]
+          },
+          options: {
+            ...baseConfig,
+            indexAxis: 'y',
+            plugins: {
+              legend: {
+                display: false
+              }
+            },
+            scales: {
+              x: {
+                beginAtZero: true,
+                ticks: {
+                  stepSize: 1
+                }
+              }
+            }
+          }
+        });
+      }
+
+      // Gráfico de Evolução de Interações
+      const interactionsCtx = document.getElementById('interactionsChart');
+      if (interactionsCtx) {
+        const interactionsByDay = {};
+        Object.values(leads).forEach(lead => {
+          const date = lead.timestamp.split('T')[0];
+          interactionsByDay[date] = (interactionsByDay[date] || 0) + (lead.interactions || 0);
+        });
+
+        const sortedDays = Object.keys(interactionsByDay).sort();
+
+        interactionsChart = new Chart(interactionsCtx, {
+          type: 'line',
+          data: {
+            labels: sortedDays.map(day => new Date(day).toLocaleDateString('pt-BR')),
+            datasets: [{
+              label: 'Interações',
+              data: sortedDays.map(day => interactionsByDay[day]),
+              borderColor: '#10B981',
+              tension: 0.4,
+              fill: true,
+              backgroundColor: 'rgba(16, 185, 129, 0.1)'
+            }]
+          },
+          options: {
+            ...baseConfig,
+            plugins: {
+              legend: {
+                display: false
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  stepSize: 1
+                }
+              }
+            }
+          }
+        });
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('🚀 Página carregada, iniciando Google Analytics...');
+      loadData();
+      loadGoogleAnalytics();
+      setInterval(loadData, 30000);
+      setInterval(loadGoogleAnalytics, 300000); // Atualiza a cada 5 minutos
+      
+      document.querySelectorAll('[data-section]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('[data-section]').forEach(b => 
+            b.classList.remove('bg-white/10', 'text-white', 'font-semibold')
+          );
+          btn.classList.add('bg-white/10', 'text-white', 'font-semibold');
+          
+          document.querySelectorAll('main > section').forEach(sec => 
+            sec.classList.add('hidden')
+          );
+          document.getElementById(btn.dataset.section).classList.remove('hidden');
+        });
+      });
+    });
+  </script>
+</body>
+</html>
