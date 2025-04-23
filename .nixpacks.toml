@@ -24,8 +24,8 @@ cmds = [
 
 [phases.build]
 cmds = [
-    "npm run build"
+    "CHROMIUM_PATH=$(which chromium) npm run build"
 ]
 
 [start]
-cmd = "npm start" 
+cmd = "CHROMIUM_PATH=$(which chromium) npm start"   
