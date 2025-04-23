@@ -29,8 +29,7 @@ const puppeteerConfig = {
         '--no-zygote',
         '--single-process',
         '--disable-gpu'
-    ],
-    executablePath: process.env.NODE_ENV === 'production' ? '/usr/bin/chromium-browser' : undefined
+    ]
 };
 
 // Inicialização do cliente WhatsApp
