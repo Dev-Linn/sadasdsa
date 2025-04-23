@@ -34,7 +34,7 @@ const puppeteerConfig = {
 
 // Verifica se está em ambiente de produção (Railway)
 if (process.env.NODE_ENV === 'production') {
-    puppeteerConfig.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium-browser';
+    puppeteerConfig.executablePath = '/usr/bin/chromium';
 }
 
 // Inicialização do cliente WhatsApp
