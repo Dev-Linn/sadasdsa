@@ -32,9 +32,9 @@ const puppeteerConfig = {
     ]
 };
 
-// Verifica se está em ambiente de produção (Railway)
+// Verifica se está em ambiente de produção (Docker)
 if (process.env.NODE_ENV === 'production') {
-    puppeteerConfig.executablePath = process.env.CHROMIUM_PATH;
+    puppeteerConfig.executablePath = '/usr/bin/chromium';
     console.log('Usando Chromium em:', puppeteerConfig.executablePath);
 }
 
