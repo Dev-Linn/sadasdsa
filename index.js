@@ -64,7 +64,7 @@ client.on('disconnected', (reason) => {
 
 // Inicialização do servidor
 client.initialize().then(() => {
-    app.listen(port, () => {
+    app.listen(port, '0.0.0.0', () => {
         console.log(`Servidor rodando em http://localhost:${port}`);
     });
 }).catch(err => {

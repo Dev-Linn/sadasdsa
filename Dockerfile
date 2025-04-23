@@ -26,7 +26,7 @@ COPY . .
 RUN npm install
 RUN PUPPETEER_SKIP_DOWNLOAD=false npm install puppeteer@22.8.2
 
-# Expõe a porta
+# Expõe a porta 8080
 EXPOSE 8080
 
 # Define o comando de inicialização
