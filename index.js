@@ -7,12 +7,18 @@ const fs = require('fs');
 const path = require('path');
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 8080;
 
 // Configuração do Express
 app.set('view engine', 'ejs');
 app.use(express.static('public'));
 app.use(express.json());
+
+// Middleware de tratamento de erros
+app.use((err, req, res, next) => {
+    console.error('Erro não tratado:', err);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+});
 
 console.log('Iniciando servidor WhatsApp...');
 console.log(`Porta: ${port}`);
@@ -28,20 +34,26 @@ const puppeteerConfig = {
         '--no-first-run',
         '--no-zygote',
         '--single-process',
-        '--disable-gpu'
+        '--disable-gpu',
+        '--disable-extensions',
+        '--disable-software-rasterizer',
+        '--disable-features=site-per-process',
+        '--disable-features=IsolateOrigins',
+        '--disable-site-isolation-trials'
     ]
 };
 
 // Verifica se está em ambiente de produção (Docker)
 if (process.env.NODE_ENV === 'production') {
-    puppeteerConfig.executablePath = '/usr/bin/chromium';
+    puppeteerConfig.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium';
     console.log('Usando Chromium em:', puppeteerConfig.executablePath);
 }
 
 // Inicialização do cliente WhatsApp
 const client = new Client({
     authStrategy: new LocalAuth(),
-    puppeteer: puppeteerConfig
+    puppeteer: puppeteerConfig,
+    restartOnAuthFail: true
 });
 
 // Eventos do WhatsApp
@@ -56,19 +68,46 @@ client.on('ready', () => {
 
 client.on('auth_failure', msg => {
     console.error('Falha na autenticação:', msg);
+    // Tenta reinicializar o cliente após falha de autenticação
+    setTimeout(() => {
+        client.initialize().catch(err => {
+            console.error('Erro ao reinicializar após falha de autenticação:', err);
+        });
+    }, 5000);
 });
 
 client.on('disconnected', (reason) => {
     console.log('Cliente desconectado:', reason);
+    // Tenta reconectar após desconexão
+    setTimeout(() => {
+        client.initialize().catch(err => {
+            console.error('Erro ao reconectar após desconexão:', err);
+        });
+    }, 5000);
 });
 
+// Função para inicializar o cliente com retry
+async function initializeClient(retries = 3) {
+    for (let i = 0; i < retries; i++) {
+        try {
+            await client.initialize();
+            return;
+        } catch (err) {
+            console.error(`Tentativa ${i + 1} falhou:`, err);
+            if (i === retries - 1) throw err;
+            await new Promise(resolve => setTimeout(resolve, 5000));
+        }
+    }
+}
+
 // Inicialização do servidor
-client.initialize().then(() => {
+initializeClient().then(() => {
     app.listen(port, '0.0.0.0', () => {
         console.log(`Servidor rodando em http://localhost:${port}`);
     });
 }).catch(err => {
-    console.error('Erro na inicialização:', err);
+    console.error('Erro na inicialização após todas as tentativas:', err);
+    process.exit(1);
 });
 
 // Rota para verificar status do WhatsApp

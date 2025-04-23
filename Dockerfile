@@ -22,12 +22,16 @@ WORKDIR /app
 # Copia os arquivos do projeto
 COPY . .
 
-# Instala as dependências do Node.js
-RUN npm install
+# Instala as dependências do Node.js incluindo o Puppeteer
 RUN PUPPETEER_SKIP_DOWNLOAD=false npm install puppeteer@22.8.2
+
+# Configura variáveis de ambiente para o Puppeteer
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+ENV NODE_ENV=production
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 
 # Expõe a porta 8080
 EXPOSE 8080
 
-# Define o comando de inicialização
-CMD ["npm", "start"] 
+# Define o comando de inicialização com flags adicionais para o Node
+CMD ["node", "--max-old-space-size=512", "--trace-warnings", "index.js"] 
