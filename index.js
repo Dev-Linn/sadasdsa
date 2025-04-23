@@ -32,10 +32,8 @@ const puppeteerConfig = {
     ]
 };
 
-// Verifica se está em ambiente de produção (Railway)
-if (process.env.NODE_ENV === 'production') {
-    puppeteerConfig.executablePath = '/usr/bin/chromium-browser';
-}
+// Não é necessário especificar o executablePath em produção
+// O Puppeteer usará o Chromium incluído automaticamente
 
 // Inicialização do cliente WhatsApp
 const client = new Client({
