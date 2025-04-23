@@ -5,7 +5,6 @@ const storageService = require('./services/storage');
 const startBot = require('./services/whatsappBot');
 const fs = require('fs');
 const path = require('path');
-const puppeteer = require('puppeteer');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -32,6 +31,11 @@ const puppeteerConfig = {
         '--disable-gpu'
     ]
 };
+
+// Verifica se está em ambiente de produção (Railway)
+if (process.env.NODE_ENV === 'production') {
+    puppeteerConfig.executablePath = '/nix/store/*-chromium-*/bin/chromium';
+}
 
 // Inicialização do cliente WhatsApp
 const client = new Client({

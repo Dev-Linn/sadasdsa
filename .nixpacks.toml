@@ -1,0 +1,31 @@
+[phases.setup]
+nixPkgs = [
+    "nodejs_18",
+    "npm-9_x",
+    "chromium",
+    "libnss3",
+    "libatk1.0-0",
+    "libatk-bridge2.0-0",
+    "libcups2",
+    "libgbm1",
+    "libasound2",
+    "libpangocairo-1.0-0",
+    "libxss1",
+    "libgtk-3-0",
+    "libxshmfence1",
+    "libglu1"
+]
+
+[phases.install]
+cmds = [
+    "npm install",
+    "PUPPETEER_SKIP_DOWNLOAD=false npm install puppeteer@22.8.2"
+]
+
+[phases.build]
+cmds = [
+    "npm run build"
+]
+
+[start]
+cmd = "npm start" 
