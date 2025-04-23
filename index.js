@@ -54,6 +54,45 @@ if (process.env.NODE_ENV === 'production') {
     console.log('Usando Chromium em:', puppeteerConfig.executablePath);
 }
 
+// Wrapper seguro para funções do WhatsApp
+function safeWhatsAppOperation(operation, fallbackValue = null) {
+    return async function(...args) {
+        if (!client) {
+            console.log('Cliente não disponível para operação');
+            return fallbackValue;
+        }
+        
+        try {
+            // Verifica se o cliente está em um estado válido
+            if (!client.info && operation !== 'initialize') {
+                console.log('Cliente não está inicializado para operação');
+                return fallbackValue;
+            }
+            
+            // Executa a operação solicitada
+            return await operation.apply(this, args);
+        } catch (error) {
+            // Detecta erros de protocolo específicos
+            if (error.message && error.message.includes('Protocol error') && 
+                error.message.includes('Target closed')) {
+                console.error('Erro de protocolo detectado, agendando recriação do cliente...');
+                
+                // Agenda recriação do cliente para este tipo específico de erro
+                setTimeout(() => {
+                    console.log('Recriando cliente após erro de protocolo...');
+                    recreateAndInitializeClient();
+                }, 3000);
+                
+                return fallbackValue;
+            }
+            
+            // Registra o erro e retorna o valor padrão
+            console.error(`Erro na operação ${operation.name}:`, error);
+            return fallbackValue;
+        }
+    };
+}
+
 // Função para criar um novo cliente WhatsApp
 function createClient() {
     try {
@@ -154,9 +193,19 @@ function setupClientListeners() {
     });
 
     // Adiciona um handler para mensagens
-    client.on('message', async msg => {
+    client.on('message', async (msg) => {
         try {
-            const contact = await msg.getContact();
+            // Usa wrapper seguro para getContact
+            const getContactSafely = safeWhatsAppOperation(async function() {
+                return await msg.getContact();
+            });
+            
+            const contact = await getContactSafely();
+            if (!contact) {
+                console.log('Não foi possível obter contato da mensagem');
+                return;
+            }
+            
             const senderName = contact.name || contact.number;
             
             console.log('\n📱 MENSAGEM RECEBIDA');
@@ -165,10 +214,17 @@ function setupClientListeners() {
             console.log(`⏰ Data/Hora: ${new Date().toLocaleString()}`);
             console.log('====================\n');
 
-            // Atualiza as tags automaticamente
-            await updateContactTags(contact);
+            // Atualiza as tags com wrapper seguro
+            const updateTagsSafely = safeWhatsAppOperation(updateContactTags);
+            await updateTagsSafely(contact);
         } catch (error) {
             console.error('Erro ao processar mensagem:', error);
+            
+            // Se for um erro de protocolo, agenda recriação
+            if (error.message && error.message.includes('Protocol error') && 
+                error.message.includes('Target closed')) {
+                setTimeout(recreateAndInitializeClient, 5000);
+            }
         }
     });
 }
@@ -223,17 +279,67 @@ function initializeClientWithErrorHandling() {
     }
 }
 
-// Cria o cliente inicial
-createClient();
-
 // IMPORTANTE: Inicialize o servidor Express ANTES de iniciar o cliente WhatsApp
+// Isso garante que o servidor esteja disponível mesmo se o WhatsApp falhar
 const server = app.listen(port, '0.0.0.0', () => {
     console.log(`Servidor rodando em http://localhost:${port}`);
     
-    // Inicia o cliente WhatsApp após o servidor estar pronto
+    // Inicia o cliente WhatsApp em uma Promise separada
     console.log('Iniciando cliente WhatsApp...');
-    initializeClientWithErrorHandling();
+    
+    // Cria e inicia o cliente em um processo separado
+    startWhatsAppClientAsync().catch(err => {
+        console.error('Erro ao iniciar cliente WhatsApp (processo principal não afetado):', err);
+    });
 });
+
+// Função para iniciar o cliente WhatsApp de forma assíncrona
+async function startWhatsAppClientAsync() {
+    try {
+        // Marca como em processo de conexão
+        whatsappStatus.connecting = true;
+        
+        // Cria o cliente inicial
+        createClient();
+        
+        // Inicia o cliente e espera até 60 segundos pelo resultado
+        const initPromise = new Promise((resolve, reject) => {
+            // Configura um timeout para evitar que fique preso indefinidamente
+            const timeoutId = setTimeout(() => {
+                whatsappStatus.lastError = 'Timeout ao inicializar cliente';
+                whatsappStatus.connecting = false;
+                reject(new Error('Timeout ao inicializar cliente WhatsApp'));
+            }, 60000);
+            
+            // Tenta inicializar o cliente
+            initializeClientWithErrorHandling()
+                .then(() => {
+                    clearTimeout(timeoutId);
+                    resolve();
+                })
+                .catch(err => {
+                    clearTimeout(timeoutId);
+                    reject(err);
+                });
+        });
+        
+        // Aguarda a inicialização, mas não bloqueia o servidor principal
+        await initPromise;
+        console.log('Cliente WhatsApp iniciado com sucesso no processo separado');
+    } catch (error) {
+        console.error('Erro ao iniciar cliente WhatsApp:', error);
+        whatsappStatus.lastError = 'Erro ao iniciar: ' + error.message;
+        whatsappStatus.connecting = false;
+        
+        // Agenda uma nova tentativa após um tempo
+        setTimeout(() => {
+            console.log('Agendando nova tentativa automática de inicialização...');
+            startWhatsAppClientAsync().catch(() => {
+                // Ignora erros na nova tentativa para não criar um loop infinito de logs
+            });
+        }, 30000);
+    }
+}
 
 // Middleware de tratamento de erros - DEVE vir APÓS as rotas
 app.use((err, req, res, next) => {
@@ -443,20 +549,26 @@ app.post('/api/leads/:number/update-tags', async (req, res) => {
         // Atualiza as tags do lead
         try {
             // Verifica se o cliente está pronto
-            if (!client.info) {
+            if (!client || !client.info) {
                 return res.status(503).json({ 
                     error: 'Cliente WhatsApp não está pronto', 
                     whatsappStatus: whatsappStatus 
                 });
             }
             
-            const contact = await client.getContactById(`${number}@c.us`);
+            // Usa o wrapper seguro para getContactById
+            const getContactSafely = safeWhatsAppOperation(async function(contactId) {
+                return await client.getContactById(contactId);
+            });
+            
+            const contact = await getContactSafely(`${number}@c.us`);
             if (!contact) {
                 return res.status(404).json({ error: 'Contato não encontrado no WhatsApp' });
             }
             
-            // Obtém as tags do contato
-            const tags = await getContactTags(contact);
+            // Obtém as tags do contato (usando wrapper seguro)
+            const getTagsSafely = safeWhatsAppOperation(getContactTags, []);
+            const tags = await getTagsSafely(contact);
             console.log(`📊 Tags obtidas:`, tags);
             
             // Atualiza as tags do lead
@@ -579,6 +691,11 @@ client.on('group_update', async (notification) => {
 // Função auxiliar para atualizar tags de um contato
 async function updateContactTags(contact) {
     try {
+        if (!contact || !contact.number) {
+            console.log('❌ Contato inválido para atualização de tags');
+            return;
+        }
+
         const number = contact.number.replace('@c.us', '');
         console.log('\n🔄 INÍCIO DA ATUALIZAÇÃO DE TAGS');
         console.log('📱 Número do contato:', number);
@@ -589,47 +706,66 @@ async function updateContactTags(contact) {
             isWAContact: contact.isWAContact
         });
         
-        // Obtém as tags do contato
+        // Obtém as tags do contato com wrapper seguro
         console.log('🔍 Chamando getContactTags...');
-        const tags = await getContactTags(contact);
+        const getTagsSafely = safeWhatsAppOperation(getContactTags, []);
+        const tags = await getTagsSafely(contact);
         console.log('📊 Tags obtidas:', tags);
         
-        // Lê o arquivo de leads
-        console.log('📂 Lendo arquivo leads.json...');
-        const leadsData = fs.readFileSync('leads.json', 'utf8');
-        const leads = JSON.parse(leadsData);
-        console.log('✅ Arquivo leads.json lido com sucesso');
+        // Lê o arquivo de leads de forma segura
+        try {
+            console.log('📂 Lendo arquivo leads.json...');
+            if (!fs.existsSync('leads.json')) {
+                console.log('📄 Arquivo leads.json não existe, criando novo arquivo...');
+                fs.writeFileSync('leads.json', JSON.stringify({}, null, 2));
+            }
+            
+            const leadsData = fs.readFileSync('leads.json', 'utf8');
+            let leads = {};
+            
+            try {
+                leads = JSON.parse(leadsData);
+                console.log('✅ Arquivo leads.json lido com sucesso');
+            } catch (e) {
+                console.error('❌ Erro ao parsear JSON do arquivo leads.json:', e);
+                console.log('🔄 Criando novo arquivo leads.json...');
+                leads = {};
+            }
 
-        // Atualiza as tags do lead
-        if (leads[number]) {
-            console.log('👥 Lead encontrado, atualizando tags...');
-            // Mantém as tags existentes e adiciona as novas
-            const existingTags = leads[number].tags || [];
-            console.log('🏷️ Tags existentes:', existingTags);
-            
-            const updatedTags = [...new Set([...existingTags, ...tags])];
-            console.log('📊 Tags atualizadas:', updatedTags);
-            
-            leads[number].tags = updatedTags;
-            console.log('💾 Salvando alterações no arquivo...');
-            fs.writeFileSync('leads.json', JSON.stringify(leads, null, 2));
-            console.log('✅ Tags atualizadas com sucesso');
-        } else {
-            console.log('⚠️ Lead não encontrado, criando novo...');
-            // Se o lead não existe, cria um novo
-            leads[number] = {
-                name: contact.name || contact.number,
-                number: number,
-                timestamp: new Date().toISOString(),
-                tags: tags,
-                formStatus: 'pendente',
-                formData: {}
-            };
-            console.log('💾 Salvando novo lead...');
-            fs.writeFileSync('leads.json', JSON.stringify(leads, null, 2));
-            console.log('✅ Novo lead criado com sucesso');
+            // Atualiza as tags do lead
+            if (leads[number]) {
+                console.log('👥 Lead encontrado, atualizando tags...');
+                // Mantém as tags existentes e adiciona as novas
+                const existingTags = leads[number].tags || [];
+                console.log('🏷️ Tags existentes:', existingTags);
+                
+                const updatedTags = [...new Set([...existingTags, ...tags])];
+                console.log('📊 Tags atualizadas:', updatedTags);
+                
+                leads[number].tags = updatedTags;
+                console.log('💾 Salvando alterações no arquivo...');
+                fs.writeFileSync('leads.json', JSON.stringify(leads, null, 2));
+                console.log('✅ Tags atualizadas com sucesso');
+            } else {
+                console.log('⚠️ Lead não encontrado, criando novo...');
+                // Se o lead não existe, cria um novo
+                leads[number] = {
+                    name: contact.name || contact.number,
+                    number: number,
+                    timestamp: new Date().toISOString(),
+                    tags: tags,
+                    formStatus: 'pendente',
+                    formData: {}
+                };
+                console.log('💾 Salvando novo lead...');
+                fs.writeFileSync('leads.json', JSON.stringify(leads, null, 2));
+                console.log('✅ Novo lead criado com sucesso');
+            }
+            console.log('✅ FIM DA ATUALIZAÇÃO DE TAGS\n');
+        } catch (fsError) {
+            console.error('❌ ERRO ao acessar arquivo leads.json:', fsError);
+            console.error('Stack trace:', fsError.stack);
         }
-        console.log('✅ FIM DA ATUALIZAÇÃO DE TAGS\n');
     } catch (error) {
         console.error('❌ ERRO ao atualizar tags:', error);
         console.error('Stack trace:', error.stack);
@@ -640,6 +776,12 @@ async function updateContactTags(contact) {
 async function getContactTags(contact) {
     try {
         console.log('🔍 INÍCIO DA OBTENÇÃO DE TAGS');
+        
+        if (!contact || !contact.id) {
+            console.log('❌ Contato inválido para obtenção de tags');
+            return [];
+        }
+        
         console.log('📱 Contato:', {
             id: contact.id._serialized,
             number: contact.number,
@@ -653,18 +795,29 @@ async function getContactTags(contact) {
 
         const tags = [];
         
-        // Método 1: Labels do WhatsApp Business
+        // Método 1: Labels do WhatsApp Business (com tratamento de erro)
         try {
             console.log('🔄 Tentando obter labels do WhatsApp Business...');
-            const allLabels = await client.getLabels();
+            
+            // Usa o wrapper seguro para getLabels
+            const getLabelsSafely = safeWhatsAppOperation(async function() {
+                if (client && client.getLabels) {
+                    return await client.getLabels();
+                }
+                return [];
+            }, []);
+            
+            const allLabels = await getLabelsSafely();
             console.log('📊 Todos os labels do WhatsApp:', allLabels);
             
             if (contact.labels && Array.isArray(contact.labels)) {
                 console.log('✅ Array de labels do contato válido:', contact.labels);
                 for (const labelId of contact.labels) {
-                    const label = allLabels.find(l => l.id === labelId);
+                    const label = allLabels.find(l => l && l.id === labelId);
                     console.log(`🏷️ Label: ${label ? label.name : 'Não encontrado'}`);
-                    tags.push(label ? label.name : 'Não encontrado');
+                    if (label && label.name) {
+                        tags.push(label.name);
+                    }
                 }
             }
         } catch (error) {
@@ -677,3 +830,55 @@ async function getContactTags(contact) {
         return [];
     }
 }
+
+// No início do arquivo, após os requires
+process.on('uncaughtException', (error) => {
+    console.error('⚠️ ERRO NÃO TRATADO CAPTURADO:', error);
+    console.error('Stack trace:', error.stack);
+    
+    // Verifica se é um erro de protocolo do Puppeteer
+    if (error.message && error.message.includes('Protocol error') && 
+        error.message.includes('Target closed')) {
+        console.log('🔄 Erro de protocolo fatal detectado. Agendando recriação do cliente...');
+        
+        // Desativa o cliente atual
+        if (client) {
+            whatsappStatus.ready = false;
+            whatsappStatus.connecting = false;
+            whatsappStatus.qrCode = null;
+            whatsappStatus.lastError = 'Erro fatal de protocolo: ' + error.message;
+            
+            // Agenda uma recriação do cliente
+            setTimeout(() => {
+                console.log('Recriando cliente após erro fatal...');
+                recreateAndInitializeClient();
+            }, 5000);
+        }
+    }
+    
+    // Não finaliza o processo para manter o servidor online
+    // O erro já foi registrado e tentativas de recuperação foram iniciadas
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('⚠️ PROMESSA REJEITADA NÃO TRATADA:', reason);
+    
+    // Verifica se é um erro de protocolo do Puppeteer
+    if (reason && reason.message && reason.message.includes('Protocol error') && 
+        reason.message.includes('Target closed')) {
+        console.log('🔄 Erro de protocolo em promessa detectado. Verificando estado do cliente...');
+        
+        // Verifica o estado atual do cliente
+        if (client && !whatsappStatus.connecting) {
+            console.log('Cliente em estado possivelmente inconsistente. Agendando verificação...');
+            
+            // Agenda uma verificação de saúde do cliente
+            setTimeout(() => {
+                if (!whatsappStatus.ready && !whatsappStatus.connecting) {
+                    console.log('Cliente confirmado em estado inconsistente. Recriando...');
+                    recreateAndInitializeClient();
+                }
+            }, 10000);
+        }
+    }
+});
