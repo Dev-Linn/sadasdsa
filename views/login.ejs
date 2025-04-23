@@ -36,6 +36,16 @@
             padding-top: 20px;
             border-top: 1px solid #e5e7eb;
         }
+        .error-message {
+            background-color: #fee2e2;
+            border: 1px solid #fca5a5;
+            color: #b91c1c;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-size: 14px;
+            text-align: center;
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center">
@@ -53,9 +63,12 @@
                 <p class="text-gray-700 mb-4 text-lg font-medium">Escaneie o QR Code com seu WhatsApp</p>
                 <div class="status-indicator">
                     <div class="flex items-center justify-center space-x-2">
-                        <div class="w-4 h-4 bg-green-500 rounded-full animate-pulse"></div>
-                        <span class="text-gray-600">Aguardando conexão...</span>
+                        <div id="status-indicator" class="w-4 h-4 bg-yellow-500 rounded-full animate-pulse"></div>
+                        <span id="status-text" class="text-gray-600">Aguardando QR Code...</span>
                     </div>
+                </div>
+                <div id="error-container" class="mt-4 hidden">
+                    <div id="error-message" class="error-message"></div>
                 </div>
             </div>
         </div>
@@ -81,24 +94,57 @@
             });
         }
 
+        // Função para mostrar erro
+        function showError(message) {
+            const errorContainer = document.getElementById('error-container');
+            const errorMessage = document.getElementById('error-message');
+            errorMessage.textContent = message;
+            errorContainer.classList.remove('hidden');
+            
+            // Atualiza o indicador de status
+            const statusIndicator = document.getElementById('status-indicator');
+            statusIndicator.classList.remove('bg-green-500', 'bg-yellow-500');
+            statusIndicator.classList.add('bg-red-500');
+            
+            const statusText = document.getElementById('status-text');
+            statusText.textContent = 'Erro na conexão';
+        }
+
         // Função para verificar status do WhatsApp
         async function checkWhatsAppStatus() {
             try {
                 const response = await fetch('/api/whatsapp-status');
-                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(`Erro na requisição: ${response.status}`);
+                }
                 
-                if (data.isReady) {
+                const data = await response.json();
+                const statusIndicator = document.getElementById('status-indicator');
+                const statusText = document.getElementById('status-text');
+                
+                if (data.ready) {
                     window.location.href = '/';
-                } else if (data.qr) {
-                    updateQRCode(data.qr);
+                } else if (data.qrCode) {
+                    updateQRCode(data.qrCode);
+                    statusIndicator.classList.remove('bg-red-500', 'bg-yellow-500');
+                    statusIndicator.classList.add('bg-green-500');
+                    statusText.textContent = 'QR Code gerado. Por favor, escaneie!';
+                    document.getElementById('error-container').classList.add('hidden');
+                } else if (data.connecting) {
+                    statusIndicator.classList.remove('bg-red-500', 'bg-green-500');
+                    statusIndicator.classList.add('bg-yellow-500');
+                    statusText.textContent = 'Conectando...';
+                } else if (data.lastError) {
+                    showError(data.lastError);
                 }
             } catch (error) {
                 console.error('Erro ao verificar status:', error);
+                showError('Erro ao comunicar com o servidor: ' + error.message);
             }
         }
 
-        // Verificar status a cada 2 segundos
-        setInterval(checkWhatsAppStatus, 2000);
+        // Verificar status a cada 3 segundos
+        setInterval(checkWhatsAppStatus, 3000);
         
         // Verificar status imediatamente
         checkWhatsAppStatus();

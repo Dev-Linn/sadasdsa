@@ -24,8 +24,8 @@ cmds = [
 
 [phases.build]
 cmds = [
-    "CHROMIUM_PATH=$(which chromium) npm run build"
+    "echo 'Finalizando build...'"
 ]
 
 [start]
-cmd = "CHROMIUM_PATH=$(which chromium) npm start"   
+cmd = "PUPPETEER_EXECUTABLE_PATH=$(which chromium) NODE_ENV=production NODE_OPTIONS='--max-old-space-size=1024' node index.js"   

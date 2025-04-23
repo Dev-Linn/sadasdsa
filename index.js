@@ -9,16 +9,18 @@ const path = require('path');
 const app = express();
 const port = process.env.PORT || 8080;
 
+// Status global do WhatsApp
+let whatsappStatus = {
+    ready: false,
+    qrCode: null,
+    lastError: null,
+    connecting: false
+};
+
 // Configuração do Express
 app.set('view engine', 'ejs');
 app.use(express.static('public'));
 app.use(express.json());
-
-// Middleware de tratamento de erros
-app.use((err, req, res, next) => {
-    console.error('Erro não tratado:', err);
-    res.status(500).json({ error: 'Erro interno do servidor' });
-});
 
 console.log('Iniciando servidor WhatsApp...');
 console.log(`Porta: ${port}`);
@@ -60,17 +62,31 @@ const client = new Client({
 client.on('qr', (qr) => {
     console.log('QR Code gerado. Por favor, escaneie com o WhatsApp:');
     qrcode.generate(qr, { small: true });
+    whatsappStatus.qrCode = qr;
+    whatsappStatus.connecting = true;
+    whatsappStatus.lastError = null;
 });
 
 client.on('ready', () => {
     console.log('Cliente WhatsApp conectado e pronto!');
+    whatsappStatus.ready = true;
+    whatsappStatus.connecting = false;
+    whatsappStatus.qrCode = null;
+    whatsappStatus.lastError = null;
 });
 
 client.on('auth_failure', msg => {
     console.error('Falha na autenticação:', msg);
+    whatsappStatus.lastError = 'Falha na autenticação: ' + msg;
+    whatsappStatus.ready = false;
+    whatsappStatus.connecting = false;
+    
     // Tenta reinicializar o cliente após falha de autenticação
     setTimeout(() => {
+        whatsappStatus.connecting = true;
         client.initialize().catch(err => {
+            whatsappStatus.lastError = 'Erro ao reinicializar: ' + err.message;
+            whatsappStatus.connecting = false;
             console.error('Erro ao reinicializar após falha de autenticação:', err);
         });
     }, 5000);
@@ -78,45 +94,87 @@ client.on('auth_failure', msg => {
 
 client.on('disconnected', (reason) => {
     console.log('Cliente desconectado:', reason);
+    whatsappStatus.ready = false;
+    whatsappStatus.connecting = false;
+    whatsappStatus.lastError = 'Desconectado: ' + reason;
+    
     // Tenta reconectar após desconexão
     setTimeout(() => {
+        whatsappStatus.connecting = true;
         client.initialize().catch(err => {
+            whatsappStatus.lastError = 'Erro ao reconectar: ' + err.message;
+            whatsappStatus.connecting = false;
             console.error('Erro ao reconectar após desconexão:', err);
         });
     }, 5000);
 });
 
+// IMPORTANTE: Inicialize o servidor Express ANTES de iniciar o cliente WhatsApp
+// Isso garante que o servidor esteja disponível mesmo se o WhatsApp falhar
+const server = app.listen(port, '0.0.0.0', () => {
+    console.log(`Servidor rodando em http://localhost:${port}`);
+    
+    // Inicia o cliente WhatsApp após o servidor estar pronto
+    console.log('Iniciando cliente WhatsApp...');
+    initializeClient(3).catch(err => {
+        whatsappStatus.lastError = 'Erro na inicialização: ' + err.message;
+        whatsappStatus.connecting = false;
+        console.error('Erro na inicialização após todas as tentativas:', err);
+    });
+});
+
+// Middleware de tratamento de erros - DEVE vir APÓS as rotas
+app.use((err, req, res, next) => {
+    console.error('Erro não tratado:', err);
+    res.status(500).send('Erro interno do servidor. Por favor, tente novamente mais tarde.');
+});
+
+// Health check endpoint (importante para Railway)
+app.get('/health', (req, res) => {
+    res.status(200).send('OK');
+});
+
+// Rota para verificar status do WhatsApp
+app.get('/api/whatsapp-status', (req, res) => {
+    res.json(whatsappStatus);
+});
+
+// Rota principal
+app.get('/', (req, res) => {
+    if (whatsappStatus.ready) {
+        res.render('index');
+    } else if (whatsappStatus.qrCode) {
+        res.render('login');
+    } else {
+        res.render('login', { error: whatsappStatus.lastError });
+    }
+});
+
+// Rota de login
+app.get('/login', (req, res) => {
+    if (whatsappStatus.ready) {
+        res.redirect('/');
+    } else {
+        res.render('login', { error: whatsappStatus.lastError });
+    }
+});
+
 // Função para inicializar o cliente com retry
 async function initializeClient(retries = 3) {
+    whatsappStatus.connecting = true;
+    
     for (let i = 0; i < retries; i++) {
         try {
             await client.initialize();
             return;
         } catch (err) {
+            whatsappStatus.lastError = `Tentativa ${i + 1} falhou: ${err.message}`;
             console.error(`Tentativa ${i + 1} falhou:`, err);
             if (i === retries - 1) throw err;
             await new Promise(resolve => setTimeout(resolve, 5000));
         }
     }
 }
-
-// Inicialização do servidor
-initializeClient().then(() => {
-    app.listen(port, '0.0.0.0', () => {
-        console.log(`Servidor rodando em http://localhost:${port}`);
-    });
-}).catch(err => {
-    console.error('Erro na inicialização após todas as tentativas:', err);
-    process.exit(1);
-});
-
-// Rota para verificar status do WhatsApp
-app.get('/api/whatsapp-status', (req, res) => {
-    res.json({
-        isReady: client.info ? true : false,
-        qr: client.info ? client.info.qr : null
-    });
-});
 
 // Rotas da API
 app.get('/api/leads', (req, res) => {
@@ -245,24 +303,6 @@ app.get('/api/products/stats', (req, res) => {
     } catch (error) {
         console.error('❌ Erro ao calcular estatísticas:', error);
         res.json([]);
-    }
-});
-
-// Rota principal
-app.get('/', (req, res) => {
-    if (!client.info) {
-        res.redirect('/login');
-    } else {
-        res.render('index');
-    }
-});
-
-// Rota de login
-app.get('/login', (req, res) => {
-    if (client.info) {
-        res.redirect('/');
-    } else {
-        res.render('login');
     }
 });
 
