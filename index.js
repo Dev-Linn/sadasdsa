@@ -188,6 +188,37 @@ app.get('/api/leads', (req, res) => {
     }
 });
 
+// Rota para excluir um lead pelo número
+app.delete('/api/leads/:number', (req, res) => {
+    try {
+        const number = req.params.number;
+        console.log(`🗑️ Solicitação para excluir lead: ${number}`);
+        
+        // Lê o arquivo de leads
+        const leadsData = fs.readFileSync('leads.json', 'utf8');
+        const leads = JSON.parse(leadsData);
+        
+        // Verifica se o lead existe
+        if (!leads[number]) {
+            console.log(`❌ Lead não encontrado: ${number}`);
+            return res.status(404).json({ error: `Lead não encontrado: ${number}` });
+        }
+        
+        // Exclui o lead
+        delete leads[number];
+        
+        // Salva o arquivo atualizado
+        fs.writeFileSync('leads.json', JSON.stringify(leads, null, 2));
+        console.log(`✅ Lead excluído com sucesso: ${number}`);
+        
+        // Retorna resposta de sucesso
+        res.json({ success: true, message: `Lead ${number} excluído com sucesso` });
+    } catch (error) {
+        console.error(`❌ Erro ao excluir lead:`, error);
+        res.status(500).json({ error: 'Erro ao excluir lead' });
+    }
+});
+
 app.get('/api/metrics', async (req, res) => {
     const leads = await storageService.getAllLeads();
     const metrics = calculateMetrics(leads);
