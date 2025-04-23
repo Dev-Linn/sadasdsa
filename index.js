@@ -14,95 +14,63 @@ app.set('view engine', 'ejs');
 app.use(express.static('public'));
 app.use(express.json());
 
-console.log('=== Iniciando configuração do WhatsApp ===');
-console.log('Ambiente:', process.env.NODE_ENV || 'desenvolvimento');
-console.log('Porta:', port);
+console.log('Iniciando servidor WhatsApp...');
+console.log(`Porta: ${port}`);
 
-// Configuração do diretório de autenticação
-const authPath = process.env.NODE_ENV === 'production' 
-    ? path.join('/tmp', '.wwebjs_auth')
-    : path.join(__dirname, '.wwebjs_auth');
-
-// Garante que o diretório existe
-if (!fs.existsSync(authPath)) {
-    fs.mkdirSync(authPath, { recursive: true });
-}
+// Configuração do Puppeteer
+const puppeteerConfig = {
+    headless: true,
+    args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
+        '--single-process',
+        '--disable-gpu'
+    ],
+    executablePath: process.env.NODE_ENV === 'production' ? '/usr/bin/chromium-browser' : undefined
+};
 
 // Inicialização do cliente WhatsApp
 const client = new Client({
     authStrategy: new LocalAuth(),
-    puppeteer: {
-        headless: true,
-        args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-accelerated-2d-canvas',
-            '--no-first-run',
-            '--no-zygote',
-            '--single-process',
-            '--disable-gpu'
-        ],
-        executablePath: process.env.NODE_ENV === 'production' ? '/usr/bin/chromium-browser' : undefined
-    },
-    qrMaxRetries: 3,
-    authTimeoutMs: 60000,
-    qrTimeoutMs: 40000,
-    restartOnAuthFail: true,
-    takeoverOnConflict: true,
-    takeoverTimeoutMs: 10000,
-    markOnlineOnConnect: true,
-    syncFullHistory: true,
-    fetchGroupMetadata: true,
-    fetchGroupParticipants: true,
-    fetchGroupAdmins: true,
-    fetchGroupInviteLinks: true,
-    fetchGroupSettings: true,
-    fetchGroupMembers: true,
-    fetchGroupMessages: true,
-    fetchGroupMedia: true,
-    fetchGroupContacts: true,
-    fetchGroupTags: true
+    puppeteer: puppeteerConfig
 });
-
-console.log('=== Configuração do Puppeteer ===');
-console.log('Headless:', client.puppeteer.headless);
-console.log('Args:', client.puppeteer.args);
-console.log('ExecutablePath:', client.puppeteer.executablePath);
-
-// Variável para armazenar o QR Code atual
-let currentQR = null;
 
 // Eventos do WhatsApp
 client.on('qr', (qr) => {
-    console.log('\n=== Novo QR Code gerado ===');
+    console.log('QR Code gerado. Por favor, escaneie com o WhatsApp:');
     qrcode.generate(qr, { small: true });
-    console.log('QR Code gerado com sucesso');
-    currentQR = qr;
 });
 
 client.on('ready', () => {
-    console.log('\n=== Cliente WhatsApp pronto ===');
-    console.log(`📅 Data/Hora: ${new Date().toLocaleString()}`);
-    console.log('=== Fim da inicialização ===\n');
-    currentQR = null;
+    console.log('Cliente WhatsApp conectado e pronto!');
 });
 
 client.on('auth_failure', msg => {
-    console.error('\n=== Falha na autenticação ===');
-    console.error('Mensagem:', msg);
+    console.error('Falha na autenticação:', msg);
 });
 
 client.on('disconnected', (reason) => {
-    console.log('\n=== Cliente desconectado ===');
-    console.log('Motivo:', reason);
+    console.log('Cliente desconectado:', reason);
+});
+
+// Inicialização do servidor
+client.initialize().then(() => {
+    app.listen(port, () => {
+        console.log(`Servidor rodando em http://localhost:${port}`);
+    });
+}).catch(err => {
+    console.error('Erro na inicialização:', err);
 });
 
 // Rota para verificar status do WhatsApp
 app.get('/api/whatsapp-status', (req, res) => {
     res.json({
         isReady: client.info ? true : false,
-        qr: currentQR
+        qr: client.info ? client.info.qr : null
     });
 });
 
@@ -384,328 +352,17 @@ async function getContactTags(contact) {
                 console.log('✅ Array de labels do contato válido:', contact.labels);
                 for (const labelId of contact.labels) {
                     const label = allLabels.find(l => l.id === labelId);
-                    console.log(`🔍 Procurando label ${labelId} em todos os labels:`, label);
-                    if (label && label.name) {
-                        tags.push(label.name);
-                        console.log(`✅ Label adicionado: ${label.name}`);
-                    }
+                    console.log(`🏷️ Label: ${label ? label.name : 'Não encontrado'}`);
+                    tags.push(label ? label.name : 'Não encontrado');
                 }
-            } else {
-                console.log('⚠️ Contato não possui labels');
             }
-        } catch (labelError) {
-            console.error('❌ Erro ao obter labels:', labelError);
+        } catch (error) {
+            console.error('❌ Erro ao obter labels do WhatsApp Business:', error);
         }
-        
-        // Método 2: Labels do chat (backup)
-        if (tags.length === 0) {
-            try {
-                console.log('🔄 Tentando obter labels do chat como backup...');
-                const chat = await client.getChatById(contact.id._serialized);
-                console.log('💬 Chat encontrado:', {
-                    id: chat.id._serialized,
-                    name: chat.name,
-                    isGroup: chat.isGroup,
-                    labels: chat.labels
-                });
-                
-                if (chat && chat.labels) {
-                    console.log('🏷️ Labels encontrados no chat:', chat.labels);
-                    tags.push(...chat.labels);
-                    console.log('✅ Labels do chat adicionados');
-                } else {
-                    console.log('⚠️ Chat não possui labels');
-                }
-            } catch (chatError) {
-                console.error('❌ Erro ao obter labels do chat:', chatError);
-            }
-        }
-        
-        // Remove duplicatas e valores vazios
-        const finalTags = [...new Set(tags.filter(tag => tag))];
-        console.log('📊 Labels finais após processamento:', finalTags);
-        console.log('✅ FIM DA OBTENÇÃO DE TAGS');
-        return finalTags;
+
+        return tags;
     } catch (error) {
-        console.error('❌ ERRO GERAL ao obter labels:', error);
+        console.error('❌ ERRO ao obter tags:', error);
         return [];
     }
 }
-
-// Rota para atualizar tags manualmente
-app.post('/api/leads/:number/update-tags', async (req, res) => {
-    try {
-        const { number } = req.params;
-        console.log('🔄 Atualização manual de tags para:', number);
-        
-        // Formata o número para o formato do WhatsApp
-        const formattedNumber = number.includes('@c.us') ? number : `${number}@c.us`;
-        
-        // Obtém o contato do WhatsApp
-        const contact = await client.getContactById(formattedNumber);
-        if (!contact) {
-            return res.status(404).json({ 
-                success: false, 
-                error: 'Contato não encontrado',
-                details: 'Não foi possível encontrar o contato no WhatsApp'
-            });
-        }
-
-        // Obtém as tags usando a função auxiliar
-        const tags = await getContactTags(contact);
-        console.log('🏷️ Tags obtidas:', tags);
-
-        // Lê o arquivo de leads
-        const leadsData = fs.readFileSync('leads.json', 'utf8');
-        const leads = JSON.parse(leadsData);
-
-        // Atualiza as tags do lead
-        if (leads[number]) {
-            // Mantém as tags existentes e adiciona as novas
-            const existingTags = leads[number].tags || [];
-            const updatedTags = [...new Set([...existingTags, ...tags])];
-            
-            leads[number].tags = updatedTags;
-            fs.writeFileSync('leads.json', JSON.stringify(leads, null, 2));
-            
-            res.json({ 
-                success: true, 
-                tags: updatedTags,
-                message: 'Tags atualizadas com sucesso'
-            });
-        } else {
-            res.status(404).json({ 
-                success: false, 
-                error: 'Lead não encontrado',
-                details: 'Não foi possível encontrar o lead no arquivo'
-            });
-        }
-    } catch (error) {
-        console.error('❌ Erro ao atualizar tags:', error);
-        res.status(500).json({ 
-            success: false, 
-            error: 'Erro ao atualizar tags',
-            details: error.message
-        });
-    }
-});
-
-// Inicialização do bot
-startBot(client, storageService);
-
-// Inicialização do servidor
-client.initialize().then(() => {
-    app.listen(port, () => {
-        console.log('\n=== Servidor iniciado ===');
-        console.log(`🌐 URL: http://localhost:${port}`);
-        console.log(`📅 Data/Hora: ${new Date().toLocaleString()}`);
-        console.log('=== Fim da inicialização do servidor ===\n');
-    });
-}).catch(err => {
-    console.error('\n=== Erro na inicialização ===');
-    console.error('Erro:', err);
-    console.error('Stack:', err.stack);
-});
-
-// Função auxiliar para calcular métricas
-function calculateMetrics(leads) {
-    const totalLeads = Object.keys(leads).length;
-    const leadsByDay = {};
-    const leadsByHour = new Array(24).fill(0);
-
-    Object.values(leads).forEach(lead => {
-        const date = new Date(lead.timestamp);
-        const day = date.toISOString().split('T')[0];
-        const hour = date.getHours();
-
-        leadsByDay[day] = (leadsByDay[day] || 0) + 1;
-        leadsByHour[hour]++;
-    });
-
-    return {
-        totalLeads,
-        leadsByDay,
-        leadsByHour,
-        peakHour: leadsByHour.indexOf(Math.max(...leadsByHour))
-    };
-}
-
-// Rota para a página de analytics
-app.get('/analytics', (req, res) => {
-    res.render('analytics');
-});
-
-// Rota para obter dados do GA4
-app.get('/api/ga4-analytics', (req, res) => {
-    // Dados mockados do GA4
-    const data = {
-        activeUsers: 1500,
-        newUsers: 250,
-        engagementRate: 65,
-        totalEvents: 4500,
-        devices: {
-            'Mobile': 800,
-            'Desktop': 600,
-            'Tablet': 100
-        },
-        events: {
-            'page_view': 2000,
-            'click': 1500,
-            'scroll': 700,
-            'form_submit': 300
-        },
-        timeline: generateTimelineData()
-    };
-    res.json(data);
-});
-
-// Função auxiliar para gerar dados da timeline
-function generateTimelineData() {
-    const timeline = {};
-    const today = new Date();
-    
-    // Gera dados dos últimos 30 dias
-    for (let i = 29; i >= 0; i--) {
-        const date = new Date(today);
-        date.setDate(date.getDate() - i);
-        const dateStr = date.toISOString().split('T')[0];
-        
-        timeline[dateStr] = {
-            activeUsers: Math.floor(Math.random() * 100) + 100,
-            newUsers: Math.floor(Math.random() * 30) + 10
-        };
-    }
-    
-    return timeline;
-}
-
-// Categoria: Melhorias Avançadas
-// Rota para a página de produtos
-app.get('/products', (req, res) => {
-    if (!client.info) {
-        res.redirect('/login');
-    } else {
-        res.render('products');
-    }
-});
-
-// Rota para a página de campanhas
-app.get('/campaigns', (req, res) => {
-    if (!client.info) {
-        res.redirect('/login');
-    } else {
-        res.render('campaigns');
-    }
-});
-
-// Rota para a página de configurações
-app.get('/settings', (req, res) => {
-    if (!client.info) {
-        res.redirect('/login');
-    } else {
-        res.render('settings');
-    }
-});
-
-// Rota para obter um lead específico
-app.get('/api/leads/:number', (req, res) => {
-    try {
-        const leadsData = fs.readFileSync('leads.json', 'utf8');
-        const leads = JSON.parse(leadsData);
-        const lead = leads[req.params.number];
-        
-        if (lead) {
-            res.json(lead);
-        } else {
-            res.status(404).json({ error: 'Lead não encontrado' });
-        }
-    } catch (error) {
-        console.error('❌ Erro ao ler lead:', error);
-        res.status(500).json({ error: 'Erro ao ler lead' });
-    }
-});
-
-// Rota para atualizar um lead
-app.put('/api/leads/:number', (req, res) => {
-    try {
-        const leadsData = fs.readFileSync('leads.json', 'utf8');
-        const leads = JSON.parse(leadsData);
-        const number = req.params.number;
-        
-        if (leads[number]) {
-            leads[number] = {
-                ...leads[number],
-                name: req.body.name || leads[number].name,
-                status: req.body.status || leads[number].status,
-                tags: leads[number].tags || [],
-                formData: {
-                    ...leads[number].formData,
-                    ...req.body.formData
-                }
-            };
-            
-            fs.writeFileSync('leads.json', JSON.stringify(leads, null, 2));
-            res.json(leads[number]);
-        } else {
-            res.status(404).json({ error: 'Lead não encontrado' });
-        }
-    } catch (error) {
-        console.error('❌ Erro ao atualizar lead:', error);
-        res.status(500).json({ error: 'Erro ao atualizar lead' });
-    }
-});
-
-// Rota para excluir um lead
-app.delete('/api/leads/:number', (req, res) => {
-    try {
-        const number = req.params.number;
-        console.log('🔍 Iniciando processo de exclusão');
-        console.log('📝 Número recebido:', number);
-        
-        // Lê o arquivo
-        const leadsData = fs.readFileSync('leads.json', 'utf8');
-        const leads = JSON.parse(leadsData);
-        
-        console.log('📋 Leads encontrados:', Object.keys(leads).length);
-        
-        if (leads[number]) {
-            console.log('✅ Lead encontrado, procedendo com a exclusão');
-            
-            // Remove o lead
-            delete leads[number];
-            
-            // Salva o arquivo
-            fs.writeFileSync('leads.json', JSON.stringify(leads, null, 2));
-            console.log('💾 Arquivo salvo com sucesso');
-            
-            res.status(204).send();
-        } else {
-            console.log('❌ Lead não encontrado');
-            res.status(404).json({ 
-                error: 'Lead não encontrado',
-                searchedNumber: number,
-                availableNumbers: Object.keys(leads)
-            });
-        }
-    } catch (error) {
-        console.error('❌ Erro ao excluir lead:', error);
-        res.status(500).json({ 
-            error: 'Erro ao excluir lead',
-            details: error.message
-        });
-    }
-});
-
-// Middleware de erro para rotas não encontradas
-app.use((req, res) => {
-    res.status(404).json({ error: 'Rota não encontrada' });
-});
-
-// Middleware de erro geral
-app.use((err, req, res, next) => {
-    console.error('❌ Erro na aplicação:', err);
-    res.status(500).json({ 
-        error: 'Erro interno do servidor',
-        details: err.message
-    });
-}); 
