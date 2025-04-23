@@ -17,6 +17,9 @@ let whatsappStatus = {
     connecting: false
 };
 
+// Variável para armazenar o cliente
+let client = null;
+
 // Configuração do Express
 app.set('view engine', 'ejs');
 app.use(express.static('public'));
@@ -51,79 +54,160 @@ if (process.env.NODE_ENV === 'production') {
     console.log('Usando Chromium em:', puppeteerConfig.executablePath);
 }
 
-// Inicialização do cliente WhatsApp
-const client = new Client({
-    authStrategy: new LocalAuth(),
-    puppeteer: puppeteerConfig,
-    restartOnAuthFail: true
-});
-
-// Eventos do WhatsApp
-client.on('qr', (qr) => {
-    console.log('QR Code gerado. Por favor, escaneie com o WhatsApp:');
-    qrcode.generate(qr, { small: true });
-    whatsappStatus.qrCode = qr;
-    whatsappStatus.connecting = true;
-    whatsappStatus.lastError = null;
-});
-
-client.on('ready', () => {
-    console.log('Cliente WhatsApp conectado e pronto!');
-    whatsappStatus.ready = true;
-    whatsappStatus.connecting = false;
-    whatsappStatus.qrCode = null;
-    whatsappStatus.lastError = null;
-});
-
-// Tratamento de erros de protocolo
-client.on('message_ack', (msg, ack) => {
+// Função para criar um novo cliente WhatsApp
+function createClient() {
     try {
-        // Nada a fazer, apenas para manter a conexão ativa
+        // Se já existe um cliente, tenta destruí-lo corretamente
+        if (client) {
+            try {
+                // Remove todos os listeners para evitar vazamentos de memória
+                client.removeAllListeners();
+                // Tenta fechar a sessão se possível
+                if (client.pupPage && !client.pupPage.isClosed()) {
+                    client.pupPage.close().catch(() => {});
+                }
+                client.destroy().catch(() => {});
+                client = null;
+                console.log('Cliente anterior destruído');
+            } catch (error) {
+                console.error('Erro ao destruir cliente antigo:', error);
+            }
+        }
+
+        // Cria um novo cliente
+        console.log('Criando novo cliente WhatsApp...');
+        client = new Client({
+            authStrategy: new LocalAuth({
+                clientId: 'whatsapp-tracker'
+            }),
+            puppeteer: puppeteerConfig,
+            restartOnAuthFail: true
+        });
+
+        // Configura os event listeners
+        setupClientListeners();
+        
+        return client;
     } catch (error) {
-        // Ignora erros aqui
+        console.error('Erro ao criar cliente:', error);
+        return null;
     }
-});
+}
 
-client.on('auth_failure', msg => {
-    console.error('Falha na autenticação:', msg);
-    whatsappStatus.lastError = 'Falha na autenticação: ' + msg;
-    whatsappStatus.ready = false;
-    whatsappStatus.connecting = false;
-    
-    // Tenta reinicializar o cliente após falha de autenticação
-    setTimeout(() => {
-        console.log('Tentando reconectar após falha de autenticação...');
-        whatsappStatus.connecting = true;
-        initializeClientWithErrorHandling();
-    }, 5000);
-});
+// Configura os listeners para o cliente
+function setupClientListeners() {
+    if (!client) return;
 
-client.on('disconnected', (reason) => {
-    console.log('Cliente desconectado:', reason);
-    whatsappStatus.ready = false;
-    whatsappStatus.connecting = false;
-    whatsappStatus.lastError = 'Desconectado: ' + reason;
-    
-    // Tenta reconectar após desconexão
-    setTimeout(() => {
-        console.log('Tentando reconectar após desconexão...');
+    client.on('qr', (qr) => {
+        console.log('QR Code gerado. Por favor, escaneie com o WhatsApp:');
+        qrcode.generate(qr, { small: true });
+        whatsappStatus.qrCode = qr;
         whatsappStatus.connecting = true;
+        whatsappStatus.lastError = null;
+    });
+
+    client.on('ready', () => {
+        console.log('Cliente WhatsApp conectado e pronto!');
+        whatsappStatus.ready = true;
+        whatsappStatus.connecting = false;
+        whatsappStatus.qrCode = null;
+        whatsappStatus.lastError = null;
+    });
+
+    client.on('auth_failure', msg => {
+        console.error('Falha na autenticação:', msg);
+        whatsappStatus.lastError = 'Falha na autenticação: ' + msg;
+        whatsappStatus.ready = false;
+        whatsappStatus.connecting = false;
+        
+        // Tenta reinicializar o cliente após falha de autenticação
+        setTimeout(() => {
+            console.log('Tentando reconectar após falha de autenticação...');
+            recreateAndInitializeClient();
+        }, 5000);
+    });
+
+    client.on('disconnected', (reason) => {
+        console.log('Cliente desconectado:', reason);
+        whatsappStatus.ready = false;
+        whatsappStatus.connecting = false;
+        whatsappStatus.lastError = 'Desconectado: ' + reason;
+        
+        // Tenta reconectar após desconexão
+        setTimeout(() => {
+            console.log('Tentando reconectar após desconexão...');
+            recreateAndInitializeClient();
+        }, 5000);
+    });
+
+    // Adicionado para capturar erros do Puppeteer
+    client.on('error', (error) => {
+        console.error('Erro no cliente:', error);
+        whatsappStatus.ready = false;
+        whatsappStatus.connecting = false;
+        whatsappStatus.lastError = 'Erro no cliente: ' + error.message;
+        
+        setTimeout(() => {
+            console.log('Tentando reconectar após erro...');
+            recreateAndInitializeClient();
+        }, 8000);
+    });
+
+    // Adiciona um handler para mensagens
+    client.on('message', async msg => {
+        try {
+            const contact = await msg.getContact();
+            const senderName = contact.name || contact.number;
+            
+            console.log('\n📱 MENSAGEM RECEBIDA');
+            console.log(`👤 De: ${senderName} (${contact.number})`);
+            console.log(`💬 Mensagem: ${msg.body}`);
+            console.log(`⏰ Data/Hora: ${new Date().toLocaleString()}`);
+            console.log('====================\n');
+
+            // Atualiza as tags automaticamente
+            await updateContactTags(contact);
+        } catch (error) {
+            console.error('Erro ao processar mensagem:', error);
+        }
+    });
+}
+
+// Função para recriar e inicializar o cliente
+function recreateAndInitializeClient() {
+    console.log('Recriando e inicializando cliente...');
+    whatsappStatus.connecting = true;
+    
+    try {
+        createClient();
         initializeClientWithErrorHandling();
-    }, 5000);
-});
+    } catch (error) {
+        console.error('Erro ao recriar cliente:', error);
+        whatsappStatus.lastError = 'Erro ao recriar cliente: ' + error.message;
+        whatsappStatus.connecting = false;
+        
+        // Tenta novamente após um tempo
+        setTimeout(recreateAndInitializeClient, 10000);
+    }
+}
 
 // Função para inicializar o cliente com tratamento de erros
 function initializeClientWithErrorHandling() {
+    if (!client) {
+        console.error('Cliente não está disponível para inicializar');
+        return;
+    }
+    
     try {
         client.initialize().catch(err => {
             console.error('Erro ao reconectar:', err);
             whatsappStatus.lastError = 'Erro ao reconectar: ' + err.message;
             whatsappStatus.connecting = false;
             
-            // Agenda nova tentativa
+            // Agenda nova tentativa com recriação completa do cliente
             setTimeout(() => {
-                console.log('Agendando nova tentativa de reconexão...');
-                initializeClientWithErrorHandling();
+                console.log('Agendando nova tentativa de reconexão com recriação do cliente...');
+                recreateAndInitializeClient();
             }, 10000);
         });
     } catch (err) {
@@ -134,40 +218,21 @@ function initializeClientWithErrorHandling() {
         // Agenda nova tentativa
         setTimeout(() => {
             console.log('Agendando nova tentativa após exceção...');
-            initializeClientWithErrorHandling();
+            recreateAndInitializeClient();
         }, 15000);
     }
 }
 
-// Função para inicializar o cliente com retry
-async function initializeClient(retries = 3) {
-    whatsappStatus.connecting = true;
-    
-    for (let i = 0; i < retries; i++) {
-        try {
-            await client.initialize();
-            return;
-        } catch (err) {
-            whatsappStatus.lastError = `Tentativa ${i + 1} falhou: ${err.message}`;
-            console.error(`Tentativa ${i + 1} falhou:`, err);
-            if (i === retries - 1) throw err;
-            await new Promise(resolve => setTimeout(resolve, 5000));
-        }
-    }
-}
+// Cria o cliente inicial
+createClient();
 
 // IMPORTANTE: Inicialize o servidor Express ANTES de iniciar o cliente WhatsApp
-// Isso garante que o servidor esteja disponível mesmo se o WhatsApp falhar
 const server = app.listen(port, '0.0.0.0', () => {
     console.log(`Servidor rodando em http://localhost:${port}`);
     
     // Inicia o cliente WhatsApp após o servidor estar pronto
     console.log('Iniciando cliente WhatsApp...');
-    initializeClient(3).catch(err => {
-        whatsappStatus.lastError = 'Erro na inicialização: ' + err.message;
-        whatsappStatus.connecting = false;
-        console.error('Erro na inicialização após todas as tentativas:', err);
-    });
+    initializeClientWithErrorHandling();
 });
 
 // Middleware de tratamento de erros - DEVE vir APÓS as rotas
@@ -179,6 +244,43 @@ app.use((err, req, res, next) => {
 // Health check endpoint (importante para Railway)
 app.get('/health', (req, res) => {
     res.status(200).send('OK');
+});
+
+// Rota para forçar a recriação completa do cliente WhatsApp
+app.post('/api/whatsapp-recreate', (req, res) => {
+    console.log('🔄 Solicitação de recriação completa do cliente recebida');
+    
+    if (whatsappStatus.connecting) {
+        return res.json({ 
+            success: false, 
+            error: 'Já existe uma tentativa de conexão em andamento' 
+        });
+    }
+    
+    try {
+        // Marca como em processo de conexão
+        whatsappStatus.connecting = true;
+        whatsappStatus.ready = false;
+        whatsappStatus.qrCode = null;
+        whatsappStatus.lastError = null;
+        
+        console.log('🔄 Recriando completamente o cliente WhatsApp');
+        recreateAndInitializeClient();
+        
+        res.json({ 
+            success: true, 
+            message: 'Recriação do cliente iniciada' 
+        });
+    } catch (error) {
+        console.error('❌ Erro ao recriar cliente:', error);
+        whatsappStatus.lastError = 'Erro ao recriar cliente: ' + error.message;
+        whatsappStatus.connecting = false;
+        
+        res.status(500).json({ 
+            success: false, 
+            error: 'Erro ao recriar cliente: ' + error.message 
+        });
+    }
 });
 
 // Rota para reconectar manualmente o WhatsApp
@@ -197,7 +299,14 @@ app.post('/api/whatsapp-reconnect', (req, res) => {
         whatsappStatus.connecting = true;
         console.log('🔄 Iniciando reconexão manual');
         
-        initializeClientWithErrorHandling();
+        // Se o cliente parece estar em um estado ruim, recria completamente
+        if (whatsappStatus.lastError && whatsappStatus.lastError.includes('Protocol error')) {
+            console.log('Detectado erro de protocolo, recriando cliente...');
+            recreateAndInitializeClient();
+        } else {
+            // Caso contrário, tenta apenas reconectar
+            initializeClientWithErrorHandling();
+        }
         
         res.json({ 
             success: true, 
@@ -217,6 +326,13 @@ app.post('/api/whatsapp-reconnect', (req, res) => {
 
 // Rota para verificar status do WhatsApp
 app.get('/api/whatsapp-status', (req, res) => {
+    // Adiciona uma verificação para detectar cliente em estado ruim
+    if (client && !whatsappStatus.connecting && !whatsappStatus.ready) {
+        // Cliente existe mas não está pronto nem conectando
+        // Pode estar em um estado ruim
+        whatsappStatus.lastError = 'Cliente em estado instável. Tente reconectar.';
+    }
+    
     res.json(whatsappStatus);
 });
 
@@ -415,118 +531,6 @@ app.get('/api/metrics', async (req, res) => {
     const leads = await storageService.getAllLeads();
     const metrics = calculateMetrics(leads);
     res.json(metrics);
-});
-
-// Rota para obter estatísticas dos produtos
-app.get('/api/products/stats', (req, res) => {
-    try {
-        const leadsData = fs.readFileSync('leads.json', 'utf8');
-        const leads = JSON.parse(leadsData);
-        
-        // Carrega produtos do arquivo de configuração
-        const productsConfig = JSON.parse(fs.readFileSync('config/products.json', 'utf8'));
-        const products = productsConfig.products;
-
-        // Calcula o total de menções para normalização
-        let totalMentions = 0;
-        const productMentions = {};
-
-        // Primeiro, calcula o total de menções
-        Object.values(leads).forEach(lead => {
-            if (lead.messages) {
-                lead.messages.forEach(message => {
-                    const messageLower = message.toLowerCase();
-                    
-                    // Verifica cada produto
-                    products.forEach(product => {
-                        // Verifica o nome do produto
-                        const productName = product.name.toLowerCase();
-                        if (messageLower.includes(productName)) {
-                            productMentions[product.name] = (productMentions[product.name] || 0) + 1;
-                            totalMentions++;
-                            return;
-                        }
-                        
-                        // Verifica as variações
-                        const hasMention = product.variations.some(variation => 
-                            messageLower.includes(variation.toLowerCase())
-                        );
-                        
-                        if (hasMention) {
-                            productMentions[product.name] = (productMentions[product.name] || 0) + 1;
-                            totalMentions++;
-                        }
-                    });
-                });
-            }
-        });
-
-        // Calcula estatísticas para cada produto
-        const stats = products.map(product => {
-            const mentions = productMentions[product.name] || 0;
-            let lastMention = null;
-            
-            // Encontra a última menção
-            Object.values(leads).forEach(lead => {
-                if (lead.messages) {
-                    lead.messages.forEach(message => {
-                        const messageLower = message.toLowerCase();
-                        const productName = product.name.toLowerCase();
-                        
-                        // Verifica o nome do produto
-                        if (messageLower.includes(productName)) {
-                            const messageTime = new Date(lead.timestamp).getTime();
-                            if (!lastMention || messageTime > lastMention) {
-                                lastMention = messageTime;
-                            }
-                            return;
-                        }
-                        
-                        // Verifica as variações
-                        const hasMention = product.variations.some(variation => 
-                            messageLower.includes(variation.toLowerCase())
-                        );
-                        
-                        if (hasMention) {
-                            const messageTime = new Date(lead.timestamp).getTime();
-                            if (!lastMention || messageTime > lastMention) {
-                                lastMention = messageTime;
-                            }
-                        }
-                    });
-                }
-            });
-
-            // Calcula a tendência baseada no número absoluto de menções
-            let trend;
-            if (mentions >= 5) {
-                trend = 100; // Alta
-            } else if (mentions >= 3) {
-                trend = 75; // Média-Alta
-            } else if (mentions >= 1) {
-                trend = 50; // Média
-            } else {
-                trend = 0; // Sem menções
-            }
-
-            return {
-                name: product.name,
-                stats: {
-                    mentions,
-                    lastMention: lastMention ? new Date(lastMention).toISOString() : null,
-                    trend
-                }
-            };
-        });
-
-        // Ordena os produtos por número de menções (decrescente)
-        stats.sort((a, b) => b.stats.mentions - a.stats.mentions);
-
-        res.json(stats);
-    } catch (error) {
-        console.error('❌ Erro ao calcular estatísticas:', error);
-        res.json([]);
-    }
 });
 
 // Evento de mensagem recebida

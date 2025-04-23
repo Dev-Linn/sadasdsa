@@ -69,9 +69,14 @@
                 </div>
                 <div id="error-container" class="mt-4 hidden">
                     <div id="error-message" class="error-message"></div>
-                    <button id="reconnect-button" class="mt-4 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-                        Tentar Reconectar
-                    </button>
+                    <div class="mt-4 flex justify-center space-x-3">
+                        <button id="reconnect-button" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                            Tentar Reconectar
+                        </button>
+                        <button id="recreate-button" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                            Recriar Cliente
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -176,6 +181,34 @@
             .catch(error => {
                 showError('Erro ao tentar reconectar: ' + error.message);
             });
+        });
+        
+        // Adiciona evento de clique ao botão de recriar cliente
+        document.getElementById('recreate-button').addEventListener('click', function() {
+            if (confirm('Isso irá recriar completamente o cliente WhatsApp. Você terá que escanear o QR Code novamente. Deseja continuar?')) {
+                fetch('/api/whatsapp-recreate', {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const statusIndicator = document.getElementById('status-indicator');
+                        statusIndicator.classList.remove('bg-red-500', 'bg-green-500');
+                        statusIndicator.classList.add('bg-yellow-500');
+                        
+                        const statusText = document.getElementById('status-text');
+                        statusText.textContent = 'Recriando cliente WhatsApp...';
+                        
+                        // Esconde a mensagem de erro
+                        document.getElementById('error-container').classList.add('hidden');
+                    } else {
+                        showError(data.error || 'Falha ao recriar cliente');
+                    }
+                })
+                .catch(error => {
+                    showError('Erro ao recriar cliente: ' + error.message);
+                });
+            }
         });
     </script>
 </body>
