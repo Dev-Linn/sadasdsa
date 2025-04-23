@@ -8,8 +8,16 @@
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10,
     "healthcheckPath": "/health",
-    "healthcheckTimeout": 30,
-    "restartPolicyDelaySeconds": 10,
+    "healthcheckTimeout": 60,
+    "restartPolicyDelaySeconds": 15,
+    "numReplicas": 1,
+    "sleepApplication": false,
     "port": 8080
-  }
+  },
+  "volumes": [
+    {
+      "path": "./.wwebjs_auth",
+      "name": "whatsapp-auth"
+    }
+  ]
 } 

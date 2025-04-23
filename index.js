@@ -75,6 +75,15 @@ client.on('ready', () => {
     whatsappStatus.lastError = null;
 });
 
+// Tratamento de erros de protocolo
+client.on('message_ack', (msg, ack) => {
+    try {
+        // Nada a fazer, apenas para manter a conexão ativa
+    } catch (error) {
+        // Ignora erros aqui
+    }
+});
+
 client.on('auth_failure', msg => {
     console.error('Falha na autenticação:', msg);
     whatsappStatus.lastError = 'Falha na autenticação: ' + msg;
@@ -83,12 +92,9 @@ client.on('auth_failure', msg => {
     
     // Tenta reinicializar o cliente após falha de autenticação
     setTimeout(() => {
+        console.log('Tentando reconectar após falha de autenticação...');
         whatsappStatus.connecting = true;
-        client.initialize().catch(err => {
-            whatsappStatus.lastError = 'Erro ao reinicializar: ' + err.message;
-            whatsappStatus.connecting = false;
-            console.error('Erro ao reinicializar após falha de autenticação:', err);
-        });
+        initializeClientWithErrorHandling();
     }, 5000);
 });
 
@@ -100,14 +106,55 @@ client.on('disconnected', (reason) => {
     
     // Tenta reconectar após desconexão
     setTimeout(() => {
+        console.log('Tentando reconectar após desconexão...');
         whatsappStatus.connecting = true;
-        client.initialize().catch(err => {
-            whatsappStatus.lastError = 'Erro ao reconectar: ' + err.message;
-            whatsappStatus.connecting = false;
-            console.error('Erro ao reconectar após desconexão:', err);
-        });
+        initializeClientWithErrorHandling();
     }, 5000);
 });
+
+// Função para inicializar o cliente com tratamento de erros
+function initializeClientWithErrorHandling() {
+    try {
+        client.initialize().catch(err => {
+            console.error('Erro ao reconectar:', err);
+            whatsappStatus.lastError = 'Erro ao reconectar: ' + err.message;
+            whatsappStatus.connecting = false;
+            
+            // Agenda nova tentativa
+            setTimeout(() => {
+                console.log('Agendando nova tentativa de reconexão...');
+                initializeClientWithErrorHandling();
+            }, 10000);
+        });
+    } catch (err) {
+        console.error('Erro ao iniciar reconexão:', err);
+        whatsappStatus.lastError = 'Erro ao iniciar reconexão: ' + err.message;
+        whatsappStatus.connecting = false;
+        
+        // Agenda nova tentativa
+        setTimeout(() => {
+            console.log('Agendando nova tentativa após exceção...');
+            initializeClientWithErrorHandling();
+        }, 15000);
+    }
+}
+
+// Função para inicializar o cliente com retry
+async function initializeClient(retries = 3) {
+    whatsappStatus.connecting = true;
+    
+    for (let i = 0; i < retries; i++) {
+        try {
+            await client.initialize();
+            return;
+        } catch (err) {
+            whatsappStatus.lastError = `Tentativa ${i + 1} falhou: ${err.message}`;
+            console.error(`Tentativa ${i + 1} falhou:`, err);
+            if (i === retries - 1) throw err;
+            await new Promise(resolve => setTimeout(resolve, 5000));
+        }
+    }
+}
 
 // IMPORTANTE: Inicialize o servidor Express ANTES de iniciar o cliente WhatsApp
 // Isso garante que o servidor esteja disponível mesmo se o WhatsApp falhar
@@ -132,6 +179,40 @@ app.use((err, req, res, next) => {
 // Health check endpoint (importante para Railway)
 app.get('/health', (req, res) => {
     res.status(200).send('OK');
+});
+
+// Rota para reconectar manualmente o WhatsApp
+app.post('/api/whatsapp-reconnect', (req, res) => {
+    console.log('🔄 Solicitação de reconexão manual recebida');
+    
+    if (whatsappStatus.connecting) {
+        return res.json({ 
+            success: false, 
+            error: 'Já existe uma tentativa de conexão em andamento' 
+        });
+    }
+    
+    try {
+        // Inicia a reconexão
+        whatsappStatus.connecting = true;
+        console.log('🔄 Iniciando reconexão manual');
+        
+        initializeClientWithErrorHandling();
+        
+        res.json({ 
+            success: true, 
+            message: 'Tentativa de reconexão iniciada' 
+        });
+    } catch (error) {
+        console.error('❌ Erro ao iniciar reconexão manual:', error);
+        whatsappStatus.lastError = 'Erro ao iniciar reconexão: ' + error.message;
+        whatsappStatus.connecting = false;
+        
+        res.status(500).json({ 
+            success: false, 
+            error: 'Erro ao iniciar reconexão: ' + error.message 
+        });
+    }
 });
 
 // Rota para verificar status do WhatsApp
@@ -159,23 +240,6 @@ app.get('/login', (req, res) => {
     }
 });
 
-// Função para inicializar o cliente com retry
-async function initializeClient(retries = 3) {
-    whatsappStatus.connecting = true;
-    
-    for (let i = 0; i < retries; i++) {
-        try {
-            await client.initialize();
-            return;
-        } catch (err) {
-            whatsappStatus.lastError = `Tentativa ${i + 1} falhou: ${err.message}`;
-            console.error(`Tentativa ${i + 1} falhou:`, err);
-            if (i === retries - 1) throw err;
-            await new Promise(resolve => setTimeout(resolve, 5000));
-        }
-    }
-}
-
 // Rotas da API
 app.get('/api/leads', (req, res) => {
     try {
@@ -185,6 +249,31 @@ app.get('/api/leads', (req, res) => {
     } catch (error) {
         console.error('❌ Erro ao ler leads:', error);
         res.status(500).json({ error: 'Erro ao ler leads' });
+    }
+});
+
+// Rota para obter um lead específico pelo número
+app.get('/api/leads/:number', (req, res) => {
+    try {
+        const number = req.params.number;
+        console.log(`🔍 Buscando lead: ${number}`);
+        
+        // Lê o arquivo de leads
+        const leadsData = fs.readFileSync('leads.json', 'utf8');
+        const leads = JSON.parse(leadsData);
+        
+        // Verifica se o lead existe
+        if (!leads[number]) {
+            console.log(`❌ Lead não encontrado: ${number}`);
+            return res.status(404).json({ error: `Lead não encontrado: ${number}` });
+        }
+        
+        // Retorna o lead encontrado
+        console.log(`✅ Lead encontrado: ${number}`);
+        res.json(leads[number]);
+    } catch (error) {
+        console.error(`❌ Erro ao buscar lead:`, error);
+        res.status(500).json({ error: 'Erro ao buscar lead' });
     }
 });
 
@@ -216,6 +305,109 @@ app.delete('/api/leads/:number', (req, res) => {
     } catch (error) {
         console.error(`❌ Erro ao excluir lead:`, error);
         res.status(500).json({ error: 'Erro ao excluir lead' });
+    }
+});
+
+// Rota para atualizar as tags de um lead
+app.post('/api/leads/:number/update-tags', async (req, res) => {
+    try {
+        const number = req.params.number;
+        console.log(`🔄 Atualizando tags para o lead: ${number}`);
+        
+        // Lê o arquivo de leads
+        const leadsData = fs.readFileSync('leads.json', 'utf8');
+        const leads = JSON.parse(leadsData);
+        
+        // Verifica se o lead existe
+        if (!leads[number]) {
+            console.log(`❌ Lead não encontrado: ${number}`);
+            return res.status(404).json({ error: `Lead não encontrado: ${number}` });
+        }
+        
+        // Atualiza as tags do lead
+        try {
+            // Verifica se o cliente está pronto
+            if (!client.info) {
+                return res.status(503).json({ 
+                    error: 'Cliente WhatsApp não está pronto', 
+                    whatsappStatus: whatsappStatus 
+                });
+            }
+            
+            const contact = await client.getContactById(`${number}@c.us`);
+            if (!contact) {
+                return res.status(404).json({ error: 'Contato não encontrado no WhatsApp' });
+            }
+            
+            // Obtém as tags do contato
+            const tags = await getContactTags(contact);
+            console.log(`📊 Tags obtidas:`, tags);
+            
+            // Atualiza as tags do lead
+            leads[number].tags = tags;
+            
+            // Salva o arquivo atualizado
+            fs.writeFileSync('leads.json', JSON.stringify(leads, null, 2));
+            console.log(`✅ Tags atualizadas com sucesso para: ${number}`);
+            
+            // Retorna resposta de sucesso
+            res.json({ 
+                success: true, 
+                message: `Tags atualizadas com sucesso para ${number}`,
+                tags: tags
+            });
+        } catch (error) {
+            console.error(`❌ Erro ao atualizar tags:`, error);
+            res.status(500).json({ 
+                error: 'Erro ao atualizar tags', 
+                details: error.message 
+            });
+        }
+    } catch (error) {
+        console.error(`❌ Erro geral ao processar requisição:`, error);
+        res.status(500).json({ error: 'Erro ao processar requisição' });
+    }
+});
+
+// Rota para atualizar os dados de um lead
+app.put('/api/leads/:number', (req, res) => {
+    try {
+        const number = req.params.number;
+        const updateData = req.body;
+        console.log(`📝 Atualizando dados do lead: ${number}`);
+        
+        // Lê o arquivo de leads
+        const leadsData = fs.readFileSync('leads.json', 'utf8');
+        const leads = JSON.parse(leadsData);
+        
+        // Verifica se o lead existe
+        if (!leads[number]) {
+            console.log(`❌ Lead não encontrado: ${number}`);
+            return res.status(404).json({ error: `Lead não encontrado: ${number}` });
+        }
+        
+        // Atualiza os dados do lead preservando alguns campos importantes
+        const updatedLead = {
+            ...leads[number],
+            ...updateData
+        };
+        
+        // Preserva as tags e o timestamp original
+        updatedLead.tags = leads[number].tags || [];
+        updatedLead.timestamp = leads[number].timestamp;
+        
+        // Atualiza o lead no objeto de leads
+        leads[number] = updatedLead;
+        
+        // Salva o arquivo atualizado
+        fs.writeFileSync('leads.json', JSON.stringify(leads, null, 2));
+        console.log(`✅ Lead atualizado com sucesso: ${number}`);
+        
+        // Retorna resposta de sucesso
+        res.json({ success: true, lead: updatedLead });
+    } catch (error) {
+        console.error(`❌ Erro ao atualizar lead:`, error);
+        res.status(500).json({ error: 'Erro ao atualizar lead' });
     }
 });
 
