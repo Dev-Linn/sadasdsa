@@ -5,6 +5,7 @@ const storageService = require('./services/storage');
 const startBot = require('./services/whatsappBot');
 const fs = require('fs');
 const path = require('path');
+const puppeteer = require('puppeteer');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -31,9 +32,6 @@ const puppeteerConfig = {
         '--disable-gpu'
     ]
 };
-
-// Não é necessário especificar o executablePath em produção
-// O Puppeteer usará o Chromium incluído automaticamente
 
 // Inicialização do cliente WhatsApp
 const client = new Client({
